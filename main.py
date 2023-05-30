@@ -186,12 +186,14 @@ class App:
                 tkinter.messagebox.showerror("Error",  "IP incorrect!")
                 return None
             
-            output = adb.connect("{}:5555".format(ipValue.get()), timeout=2)
-            if "connected" in output:
-                lbMsg.config(text="Kết nối thành công")
+            
+            try:
+                output = adb.connect("{}:5555".format(ipValue.get()), timeout=3.0)
+                lbMsg.config(text="Connected")
                 load_device()
-            else:
-                tkinter.messagebox.showerror("Error",  output)
+            except errors.AdbTimeout as e:
+                tkinter.messagebox.showerror("Error",  "Connect timeout")
+                
 
         def onBtnInstAdbServerClick(*args):
             pool = ThreadPool(processes=1)
