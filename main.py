@@ -1,5 +1,5 @@
 from tkinter import *
-import os, subprocess, re, sys, requests
+import os, subprocess, re, sys, requests, pathlib, queue
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox
@@ -7,34 +7,36 @@ import utils
 from threading import Thread
 from time import sleep
 from multiprocessing.pool import ThreadPool
+from adbutils import adb, errors
 
 run_success = False
 
 
-def check_before():
-    if utils.tool_exist('adb') == 0:
-        tkinter.messagebox.showerror("Error",  "Cannot detect adb tool!")
-        # return False
+# def check_before():
+#     if utils.tool_exist('adb') == 0:
+#         tkinter.messagebox.showerror("Error",  "Cannot detect adb tool!")
+#         # return False
     
-    config_name = 'myapp.cfg'
+#     config_name = 'adb'
 
-    # determine if application is a script file or frozen exe
-    if getattr(sys, 'adb', False):
-        application_path = os.path.dirname(sys.executable)
-    elif __file__:
-        application_path = os.path.dirname(__file__)
+#     # determine if application is a script file or frozen exe
+#     if getattr(sys, 'adb', False):
+#         application_path = os.path.dirname(sys.executable)
+#     elif __file__:
+#         application_path = os.path.dirname(__file__)
 
-    config_path = os.path.join(application_path, config_name)
-    os.chdir(application_path)
-    print(application_path)
-    cwd = os.getcwd()
+#     config_path = os.path.join(application_path, config_name)
+#     os.chdir(config_path)
+#     print(application_path)
 
 class App:
     def __init__(self, parent):
         self.parent = parent
+        self.path = os.path.dirname(__file__)
+        print("work dir: "+self.path)
 
         self.selected_device = None
-        list_devices = []
+        device = None
 
         top_frame = Frame(parent)
         top_frame.pack(anchor=W, fill=X)
@@ -60,40 +62,42 @@ class App:
             console.insert(END, "%s\n" % text)
 
         def call_adb(command):
-            command = str(command)
-            if command.startswith("adb") == False:
-                command = "adb -s {} {}".format(self.selected_device, command)
-            output = os.popen(command).read()
+            # command = str(command)
+            # if command.startswith("adb") == False:
+            #     command = "adb -s {} {}".format(self.selected_device, command)
+            # output = os.popen(command).read()
 
-            print(command)
-            print(output)
-            return output
+            # print(command)
+            # print(output)
+
+            return None
         
         def load_device():
-            output = call_adb("adb devices")
-            if output is None:
-                return None
             devices = []
-            for line in output.split("\n"):
-                if "{}".format(line).endswith("device"):
-                    devices.append("{}".format(line).split("\t")[0])
+            for d in adb.device_list():
+                devices.append(d.serial)
             loadOptionMenu(devices)
             return None
+        
         def load_device_info(device):
-            call_adb("root")
-            product = call_adb("shell getprop ro.product.device".format(device)).rstrip()
-            version = call_adb("shell getprop ro.build.version.release".format(device)).rstrip()
-            lbDeviceConnected.config(text="{} (Android: {})".format(product, version))
+            self.device = adb.device(serial=self.selected_device)
+            self.device.root()
+            # serial = device.shell("getprop ro.serial")
+            product = self.device.prop.model
+            version = self.device.shell("getprop ro.build.version.release").rstrip()
+            lbDeviceConnected.config(text="{} (Android: {})".format(product,version))
             return None
         
         def download_file(filename):
-            if os.path.isdir("files") == False:
+            if os.path.exists("files") == False:
                 os.makedirs("files")
+                lbStatus.config(text="Create files dir")
+            print("Download file: "+filename)
             url = "https://aliasesurl.tgdd.vn/ADBServer/{}".format(filename)
             t = utils.DownloadFile(url=url, filename=filename, label=lbStatus)
             t.start()
-            t.join()
-                        
+            # t.join()
+            return t
 
         def on_selected(*args):
             self.selected_device=selected.get()
@@ -101,21 +105,31 @@ class App:
         
         def mount_system():
             push_console("Mount system")
-            call_adb("shell \"mount -o remount,rw /system && busybox chmod o+w /system/bin\"")
+            try:
+                self.device.shell("mount -o remount,rw /system && busybox chmod o+w /system/bin")
+            except errors.AdbError as e:
+                push_console("mount fail")
+            
         def unmount_system():
             push_console("Unmount system")
-            call_adb("shell \"busybox chmod o-w /system/etc && mount -o remount,ro /system\"")
+            try:
+                self.device.shell("busybox chmod o-w /system/etc && mount -o remount,ro /system")
+            except errors.AdbError as e:
+                push_console("unmount fail")
 
         def install_curl():
             push_console("Installing curl...")
             mount_system()
-            call_adb("push ./files/curl-arm /system/bin/curl")
-            call_adb("shell \"chmod 777 /system/bin/curl\"")
-            push_console("Push and Chmod curl")
+            try:
+                self.device.sync.push("./files/curl-arm", "/system/bin/curl")
+                self.device.shell("chmod 777 /system/bin/curl")
+                push_console("Push and Chmod curl binary")
+            except errors.AdbError as e:
+                push_console("Push and Chmod curl fail")
             unmount_system()
 
             # test
-            output = call_adb("shell \"ls /system/bin | grep curl\"")
+            output = self.device.shell("ls /system/bin | grep curl")
             if "curl" in output:
                 push_console("SUCCESS.\n\n")
             else:
@@ -124,37 +138,38 @@ class App:
         def install_app_http():
             push_console("Installing app_http...")
             # make dir
-            output = call_adb("shell \"mkdir /data/app_http && mkdir /data/app_http_web_root\"")
-            if output == "":
+            try:
+                output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
                 push_console("Create dir /data/app_http success")
+            except errors.AdbError as e:
+                push_console("Create dir /data/app_http FAIL")
 
             # push file
-            output = call_adb("push ./files/app_http /data/app_http")
-            if "1 file pushed" in output:
-                push_console("Push file app_http success")
-
-            output = call_adb("push ./files/key.pem /data/app_http")
-            if "1 file pushed" in output:
-                push_console("Push file key.pem success")
-
-            output = call_adb("push ./files/cert.pem /data/app_http")
-            if "1 file pushed" in output:
-                push_console("Push file cert.pem success")
-
-            # chmod file
-            output = call_adb("shell \"chmod 777 /data/app_http/app_http && chmod 777 /data/app_http/key.pem && chmod 777 /data/app_http/cert.pem\"")
-            if output =="":
-                push_console("Chmod files success")
+            try:
+                self.device.sync.push("./files/app_http", "/data/app_http/app_http")
+                self.device.sync.push("./files/key.pem", "/data/app_http/key.pem")
+                self.device.sync.push("./files/cert.pem", "/data/app_http/cert.pem")
+                push_console("Upload file success")
+            except errors.AdbError as e:
+                push_console("Upload file FAIL")
+            
+            try:
+                self.device.shell("chmod 777 /data/app_http/app_http && chmod 777 /data/app_http/key.pem && chmod 777 /data/app_http/cert.pem")
+                push_console("Chmod file success")
+            except errors.AdbError as e:
+                push_console("Chmod file FAIL")
             
             mount_system()
-            output = call_adb("exec-out \"cat /system/bin/install-recovery.sh | grep app_http\"")
+            output = self.device.shell("cat /system/bin/install-recovery.sh | grep app_http")
             if "app_http" not in output:
                 push_console("Installing app_http as system service...")
-                call_adb('shell "echo \\"sh -c \'export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /data/app_http && ./app_http &\'\\" >> /system/bin/install-recovery.sh"')
+                self.device.shell("echo \"sh -c \'export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /data/app_http && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+            else:
+                push_console("app_http already installed")
             unmount_system()
 
             # test
-            output = call_adb("exec-out \"cat /system/bin/install-recovery.sh | grep app_http\"")
+            output = self.device.shell("cat /system/bin/install-recovery.sh | grep app_http")
             if "app_http" in output:
                 push_console("SUCCESS.\n\n")
             else:
@@ -170,8 +185,8 @@ class App:
             if match == None:
                 tkinter.messagebox.showerror("Error",  "IP incorrect!")
                 return None
-
-            output = call_adb("adb connect {}:5555".format(ipValue.get()))
+            
+            output = adb.connect("{}:5555".format(ipValue.get()), timeout=2)
             if "connected" in output:
                 lbMsg.config(text="Kết nối thành công")
                 load_device()
@@ -179,27 +194,20 @@ class App:
                 tkinter.messagebox.showerror("Error",  output)
 
         def onBtnInstAdbServerClick(*args):
-            if os.path.isfile("files/curl-arm") == False:
+            pool = ThreadPool(processes=1)
+
+            if os.path.exists("files/curl-arm") == False:
                 download_file("curl-arm")
-            if os.path.isfile("files/app_http") == False:
+            if os.path.exists("files/app_http") == False:
                 download_file("app_http")
-            if os.path.isfile("files/key.pem") == False:
+            if os.path.exists("files/key.pem") == False:
                 download_file("key.pem")
-            if os.path.isfile("files/cert.pem") == False:
+            if os.path.exists("files/cert.pem") == False:
                 download_file("cert.pem")
 
-            # tInstall = Thread(target=install_curl)
-            # tInstall.start()
 
-            # aInstall = Thread(target=install_app_http)
-            # aInstall.start()
-
-            # tInstall.join()
-            # aInstall.join()
-
-            pool = ThreadPool(processes=1)
-            async_result = pool.apply_async(install_curl)
-            async_result = pool.apply_async(install_app_http)
+            # async_result = pool.apply_async(install_curl)
+            # async_result = pool.apply_async(install_app_http)
             # tkinter.messagebox.showinfo("Congratulation",  "Install app_http successfully")
             return True
 
@@ -247,11 +255,19 @@ class App:
         lbStatus = Label(footer_frame, text="")
         lbStatus.grid(row=0,column=3, padx=10, sticky='we')
 
+        
         load_device()
+        # try:
+        #     # output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
+        #     output = self.device.sync.push(pathlib.Path("files/app_http"), "/data/app_http/app_http")
+        #     print(output)
+        # except errors.AdbError as e:
+        #     print(e)
+        # print(self.device.shell("ls /system/bin | grep curl"))
 
 # Check adb exist
-if check_before() == False:
-    exit(1)
+# if check_before() == False:
+#     exit(1)
 
 # Create windows
 w = Tk()

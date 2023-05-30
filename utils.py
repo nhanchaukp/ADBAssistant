@@ -1,11 +1,5 @@
-import os, requests, sys
-from shutil import which
+import os, requests
 from threading import Thread
-
-
-
-def tool_exist(name):
-    return os.path.isfile(name)
 
 class DownloadFile(Thread):
     # constructor
