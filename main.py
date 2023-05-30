@@ -196,8 +196,10 @@ class App:
                 
 
         def onBtnInstAdbServerClick(*args):
+            if self.selected_device is None:
+                tkinter.messagebox.showerror("Error",  "No device selected!")
+                return False
             pool = ThreadPool(processes=1)
-
             if os.path.exists("files/curl-arm") == False:
                 download_file("curl-arm")
             if os.path.exists("files/app_http") == False:
@@ -208,8 +210,8 @@ class App:
                 download_file("cert.pem")
 
 
-            # async_result = pool.apply_async(install_curl)
-            # async_result = pool.apply_async(install_app_http)
+            async_result = pool.apply_async(install_curl)
+            async_result = pool.apply_async(install_app_http)
             # tkinter.messagebox.showinfo("Congratulation",  "Install app_http successfully")
             return True
 
