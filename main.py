@@ -1,13 +1,10 @@
 from tkinter import *
-import os, subprocess, re, sys, requests, pathlib, queue, platform
+import os, subprocess, platform
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
-from tkinter import ttk
 import tkinter.messagebox
 import utils
-from threading import Thread, Event
-from time import sleep
 from multiprocessing.pool import ThreadPool
 from adbutils import adb, errors, AdbInstallError
 
@@ -258,14 +255,19 @@ class App:
             t = utils.ScanAndroidBox(callback=push_console, vlan=vlanValue.get(), label=lbStatus)
             t.start()
 
+        def install_apk(file_path):
+            lbStatus.config(text="Wait for install apk...")
+            try:
+                output = self.device.install(file_path)
+                push_console("Install {} success.".format(file_path))
+            except AdbInstallError as e:
+                push_console("Error install apk! %s" % e)
+
         def onBtnInstallApkClick():
             file_path = filedialog.askopenfilename(title="Select APK", parent=self.parent, filetypes=[("APK File", "*.apk")])
             if file_path != "":
-                try:
-                    output = self.device.install(file_path)
-                    print(output)
-                except AdbInstallError as e:
-                    print(e)
+                pool = ThreadPool(processes=1)
+                async_result = pool.apply_async(install_apk, [file_path])
 
         def loadOptionMenu(new_choices):
             # Reset var and delete all old options
@@ -285,7 +287,7 @@ class App:
         lbIp = Label(top_frame, text="Device IP")
         lbIp.grid(row=0,column=0, sticky='we')
         ipValue = StringVar()
-        txtIp = Entry(top_frame, width=20, textvariable=ipValue)
+        txtIp = Entry(top_frame, width=20, textvariable=ipValue, justify=CENTER)
         txtIp.grid(row=0, column=1, sticky='w')
         btnConnect = Button(top_frame, text="Connect", command=onBtnConnectClick)
         btnConnect.grid(row=0, column=2, padx=10, sticky='w')
@@ -298,7 +300,7 @@ class App:
         vlanValue = StringVar()
         vlanValue.set(value="192.168.2.1")
         # vlanValue.set(value="10.100.120.1")
-        txtVlan = Entry(scan_frame, width=20, textvariable=vlanValue)
+        txtVlan = Entry(scan_frame, width=20, textvariable=vlanValue, justify=CENTER)
         txtVlan.grid(row=0, column=1, sticky='w')
         btnScan = Button(scan_frame, text="Scan", command=onBtnScanClick)
         btnScan.grid(row=0, column=2, padx=10, sticky='w')
