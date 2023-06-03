@@ -1,38 +1,45 @@
 import os, requests, re, socket
 from threading import Thread
-from adbutils import adb, errors, AdbInstallError
 
 def valid_ip(ip):
     return re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ip)
 
 class DownloadFile(Thread):
     # constructor
-    def __init__(self, url, filename, label):
+    def __init__(self, filelist, label, update_download_status, update_finish, callback):
         # execute the base constructor
         Thread.__init__(self)
         # set a default value
-        self.filename = filename
-        self.url = url
+        self.filelist = filelist
+        self.baseurl = "https://aliasesurl.tgdd.vn/ADBServer/"
         self.label=label
+        self.callback = callback
+        self.update_download_status = update_download_status
+        self.update_finish = update_finish
  
     # function executed in a new thread
     def run(self):
         if os.path.isdir("files") == False:
             os.makedirs("files")
-        with open("files/{}".format(self.filename), "wb") as f:
-            response = requests.get(self.url, stream=True, timeout=60000)
-            total_length = response.headers.get('content-length')
-
-            if total_length is None: # no content length header
-                f.write(response.content)
-            else:
-                current = 0
-                total_length = int(total_length)
-                for data in response.iter_content(chunk_size=4096):
-                    current += len(data)
-                    f.write(data)
-                    percent = round(current/total_length * 100, 1)
-                    self.label.config(text="Downloading {}... {}%".format(self.filename, percent))
+        for filename in self.filelist:
+            dl_url = self.baseurl+filename
+            # dl_url="http://ipv4.download.thinkbroadband.com/5MB.zip"
+            self.callback("Downloading %s..." % filename, "")
+            try:
+                with requests.get(dl_url, stream=True, timeout=2) as r:
+                    with open("files/{}".format(filename), "wb") as f:
+                        total_size = int(r.headers.get('content-length'))
+                        chunk_size = 1
+                        for i, chunk in enumerate(r.iter_content(chunk_size=chunk_size)):
+                            percent = round(i * chunk_size / total_size * 100, 1)
+                            f.write(chunk)
+                            self.label.config(text="Downloading {}... {}%".format(filename, percent))
+                    self.callback("done.")
+            except:
+                self.callback("fail.")
+                self.update_download_status(False)
+                self.update_finish(True)
+                break
 
 class ScanAndroidBox(Thread):
     # constructor
@@ -51,7 +58,7 @@ class ScanAndroidBox(Thread):
         a = '.'
         net2 = net1[0] + a + net1[1] + a + net1[2] + a
 
-        for i in range(2, 255):
+        for i in range(1, 255):
             addr = net2+str(i)
             s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             socket.setdefaulttimeout(0.3)
