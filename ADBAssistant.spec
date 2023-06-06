@@ -47,5 +47,5 @@ app = BUNDLE(
     exe,
     name='ADBAssistant.app',
     icon='icon.icns',
-    bundle_identifier=None,
+    bundle_identifier='com.mwg.adbserver',
 )

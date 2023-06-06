@@ -1,9 +1,17 @@
-import os, requests, re, socket
+import os, requests, re, socket, json
 from threading import Thread
 
 def valid_ip(ip):
     return re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ip)
 
+def get_update_json():
+    url_json = "https://aliasesurl.tgdd.vn/ADBServer/update.json"
+    try:
+        with requests.get(url_json, stream=True, timeout=2) as r:
+            return json.loads(r.content)
+    except:
+        return None
+        
 class DownloadFile(Thread):
     # constructor
     def __init__(self, filelist, label, update_download_status, update_finish, callback):
@@ -26,7 +34,7 @@ class DownloadFile(Thread):
             # dl_url="http://ipv4.download.thinkbroadband.com/5MB.zip"
             self.callback("Downloading %s..." % filename, "")
             try:
-                with requests.get(dl_url, stream=True, timeout=2) as r:
+                with requests.get(dl_url, stream=True, timeout=3) as r:
                     with open("files/{}".format(filename), "wb") as f:
                         total_size = int(r.headers.get('content-length'))
                         chunk_size = 1
@@ -35,11 +43,13 @@ class DownloadFile(Thread):
                             f.write(chunk)
                             self.label.config(text="Downloading {}... {}%".format(filename, percent))
                     self.callback("done.")
+                    self.update_download_status(True)
             except:
                 self.callback("fail.")
                 self.update_download_status(False)
                 self.update_finish(True)
                 break
+            self.update_finish(True)
 
 class ScanAndroidBox(Thread):
     # constructor
@@ -64,9 +74,9 @@ class ScanAndroidBox(Thread):
             socket.setdefaulttimeout(0.3)
             result = s.connect_ex((addr, 5555))
             print("Check {}:5555 is {}".format(addr, result))
-            self.label.config(text="Scan ip {}".format(addr))
+            self.label.config(text="Scan {}".format(addr))
             if result == 0:
                 self.device_online.append(addr)
         
         if len(self.device_online):
-            self.function("List IP TVBox:\n %s \nplease copy it and Connect." % '\n - '.join(self.device_online))
+            self.function("List IP TVBox:\n - %s \nplease copy it and Connect." % '\n - '.join(self.device_online))

@@ -1,15 +1,16 @@
 from tkinter import *
-import os, subprocess, platform, urllib, requests
+import os, subprocess, platform
 from datetime import datetime
 import tkinter as tk
-from tkinter import filedialog
-import tkinter.messagebox
+from tkinter import filedialog, messagebox
 import utils
 from multiprocessing.pool import ThreadPool
 from threading import Thread, Lock
 from time import sleep
 from adbutils import adb, errors, AdbInstallError
-import concurrent.futures
+
+VERSION = 1.0
+CHECKED_VERSION = False
 
 class App(tk.Tk):
     def __init__(self):
@@ -56,6 +57,22 @@ class App(tk.Tk):
         footer_frame.config(pady=10)
         footer_frame.pack(anchor=W, fill=X, side=BOTTOM)
 
+        def check_update():
+            global VERSION, CHECKED_VERSION
+            if CHECKED_VERSION:
+                return None
+            CHECKED_VERSION = True
+            json = utils.get_update_json()
+            if json is not None:
+                if float(json["version"]) > float(VERSION):
+                    answer = messagebox.askyesno(title="New version update", message="{}\n\nClick Yes to update.".format(json["changelog"]))
+                    if answer:
+                        if platform.system() == 'Darwin':       # macOS
+                            url = json["download_url"] + "ADBAssistant.app"
+                        elif platform.system() == 'Windows':    # Windows
+                            url = json["download_url"] + "ADBAssistant.exe"
+                        openfile(url)
+
         def push_console(text, newline = "\n"):
             console.insert(END, "{}{}".format(text, newline))
 
@@ -63,7 +80,7 @@ class App(tk.Tk):
             if platform.system() == 'Darwin':       # macOS
                 subprocess.call(('open', filepath))
             elif platform.system() == 'Windows':    # Windows
-                os.startfile(filepath)
+                subprocess.call(('start', filepath))
             else:                                   # linux variants
                 subprocess.call(('xdg-open', filepath))
 
@@ -105,17 +122,6 @@ class App(tk.Tk):
             except errors.AdbError as e:
                 load_device()
             return None
-        
-        # def download_file(filename):
-        #     if os.path.exists("files") == False:
-        #         os.makedirs("files")
-        #         lbStatus.config(text="Create files dir")
-        #     url = "https://aliasesurl.tgdd.vn/ADBServer/{}".format(filename)
-        #     t = utils.DownloadFile(url=url, filename=filename, label=lbStatus, callback=push_console)
-        #     t.start()
-        #     # t.join()
-
-        
 
         def on_selected(*args):
             self.selected_device=selected.get()
@@ -134,6 +140,12 @@ class App(tk.Tk):
                 self.device.shell("busybox chmod o-w /system/etc && mount -o remount,ro /system")
             except errors.AdbError as e:
                 push_console("unmount fail")
+
+        def install_adb_server():
+            pool = ThreadPool(processes=1)
+            async_result = pool.apply_async(install_curl)
+            async_result = pool.apply_async(install_app_http)
+            async_result = pool.apply_async(remove_apps)
 
         def install_curl():
             push_console("Installing lib...")
@@ -178,20 +190,46 @@ class App(tk.Tk):
                 self.device.shell("settings put global package_verifier_enable 0")
                 push_console("done.")
 
-                output = self.device.shell("cat /system/bin/install-recovery.sh | grep app_http")
-                if "app_http" not in output:
-                    push_console("Installing app_http as system service...")
-                    self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                check_recovery = self.device.shell("ls /system/bin | grep 'install-recovery.sh'")
+                if 'install-recovery.sh' in check_recovery:
+                    push_console('found install-recovery.sh in /system/bin')
+                    output = self.device.shell("cat /system/bin/install-recovery.sh | grep app_http")
+                    if "app_http" not in output:
+                        push_console("Installing app_http as system service...")
+                        self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                    else:
+                        push_console("app_http already installed")  
                 else:
-                    push_console("app_http already installed")
-
-                
+                    push_console('install-recovery.sh not found in /system/bin... create it')
+                    self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
+                    self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                    self.device.shell("chmod 777 /system/bin/install-recovery.sh")
+                        
                 push_console("ALL DONE.\n\n")
             except errors.AdbError as e:
                 print(e)
                 push_console("FAIL: {}\n\n".format(e))   
             # unmount
             unmount_system()
+        
+        def remove_apps():
+            try:
+                push_console("Remove app Facebook...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.facebook.katana", timeout=1)
+                push_console("done.")
+                push_console("Remove app Skype...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.skype.raider", timeout=1)
+                push_console("done.")
+                push_console("Remove app OTA Upgrade...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.himedia.hmdupgrade", timeout=1)
+                push_console("done.")
+                push_console("Remove app HiMediaTV...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=1)
+                push_console("done.")
+
+                push_console("ALL DONE.\n\n")
+            except errors.AdbError as e:
+                push_console("FAIL: {}\n\n".format(e))   
 
         def connect(address):
             try:
@@ -200,37 +238,20 @@ class App(tk.Tk):
                 lbMsg.config(text="Connected")
                 load_device()
             except errors.AdbTimeout as e:
-                tkinter.messagebox.showerror("Error",  "Connect timeout")
+                messagebox.showerror("Error",  "Connect timeout")
 
         def onBtnConnectClick(*args):
             if ipValue.get() is None or ipValue.get() == "":
-                tkinter.messagebox.showerror("Error",  "Please input IP")
+                messagebox.showerror("Error",  "Please input IP")
                 return None
             if utils.valid_ip(ipValue.get()) == None:
-                tkinter.messagebox.showerror("Error",  "IP incorrect!")
+                messagebox.showerror("Error",  "IP incorrect!")
                 return None
             connect(ipValue.get())
-
-        def download_files(filename, timeout):
-            baseurl = "https://aliasesurl.tgdd.vn/ADBServer/"
-            dl_url = "http://ipv4.download.thinkbroadband.com/5MB.zip" #baseurl+filename
-            try:
-                with requests.get(dl_url, stream=True, timeout=timeout) as r:
-                    with open("files/{}".format(filename), "wb") as f:
-                        total_size = int(r.headers.get('content-length'))
-                        chunk_size = 1
-                        for i, chunk in enumerate(r.iter_content(chunk_size=chunk_size)):
-                            percent = round(i * chunk_size / total_size * 100, 1)
-                            f.write(chunk)
-                            lbStatus.config(text="Downloading {}... {}%".format(filename, percent))
-                    return True
-            except Exception as e:
-                print(e)
-                return False
-                
         
         def update_finish(val):
             self.finished = val
+
         def update_download_status(val):
             self.download_success = val
 
@@ -249,10 +270,8 @@ class App(tk.Tk):
             if os.path.exists("files/ipconfigstore") == False:
                 miss_files.append("ipconfigstore")
             
-            dl_complete = True
             if miss_files:
                 push_console("Missing file(s):")
-
                 with self.lock:
                     self.finished = False
 
@@ -263,28 +282,23 @@ class App(tk.Tk):
                 download_thread.daemon = True
                 self.after(self.POLLING_DELAY, monitor_download)
                 download_thread.start()
+            else:
+                install_adb_server()
+
 
         def monitor_download():
+            print(self.finished)
             with self.lock:
                 if not self.finished:
                     self.after(self.POLLING_DELAY, monitor_download)  # Keep polling.
                 else:
+                    print(self.download_success)
                     if self.download_success:
                         # download success => install file
-                        pool = ThreadPool(processes=1)
-                        async_result = pool.apply_async(install_curl)
-                        async_result = pool.apply_async(install_app_http)
+                        install_adb_server()
                     else:
                         push_console("Error while download file!.")
                     
-
-        def monitor(self, thread):
-            if thread.is_alive():
-            # check the thread every 100ms
-                self.after(100, lambda: monitor(self, thread))
-            else:
-                return True
-
         def takescreenshoot():
             if os.path.isdir("screenshoots") == False:
                 os.makedirs("screenshoots")
@@ -318,10 +332,13 @@ class App(tk.Tk):
 
         def onBtnScanClick(*args):
             if utils.valid_ip(vlanValue.get()) == None:
-                tkinter.messagebox.showerror("Error",  "Vlan IP incorrect!")
+                messagebox.showerror("Error",  "Vlan IP incorrect!")
                 return None
+            # btnScan.config(state=DISABLED)
             t = utils.ScanAndroidBox(callback=push_console, vlan=vlanValue.get(), label=lbStatus)
             t.start()
+            # pool = ThreadPool(processes=1)
+            # async_result = pool.apply_async(lambda: t.start())
 
         def led_blink():
             push_console("Led blinking...", "")
@@ -372,7 +389,7 @@ id: 836156484""".format(staticIpValue.get())
             
         def onBtnSetStaticIpClick(*args):
             if utils.valid_ip(staticIpValue.get()) == None:
-                tkinter.messagebox.showerror("Error",  "Static IP incorrect!")
+                messagebox.showerror("Error",  "Static IP incorrect!")
                 return None
             pool = ThreadPool(processes=1)
             async_result = pool.apply_async(set_static_ip)
@@ -389,7 +406,7 @@ id: 836156484""".format(staticIpValue.get())
                 push_console("Error install apk! %s" % e)
 
         def onBtnInstallApkClick():
-            file_path = filedialog.askopenfilename(title="Select APK", parent=self.parent, filetypes=[("APK File", "*.apk")])
+            file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
             if file_path != "":
                 pool = ThreadPool(processes=1)
                 async_result = pool.apply_async(install_apk, [file_path])
@@ -423,8 +440,8 @@ id: 836156484""".format(staticIpValue.get())
         lbVlan = Label(scan_frame, text="VLAN")
         lbVlan.grid(row=0,column=0, padx=10, sticky='we')
         vlanValue = StringVar()
-        vlanValue.set(value="192.168.2.1")
-        # vlanValue.set(value="10.100.120.1")
+        # vlanValue.set(value="192.168.2.1")
+        vlanValue.set(value="10.100.120.1")
         txtVlan = Entry(scan_frame, width=20, textvariable=vlanValue, justify=CENTER)
         txtVlan.grid(row=0, column=1, sticky='w')
         btnScan = Button(scan_frame, text="Scan", command=onBtnScanClick)
@@ -481,6 +498,8 @@ id: 836156484""".format(staticIpValue.get())
 
         
         load_device()
+
+        self.after(1000, check_update)
         # try:
         #     # output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
         #     output = self.device.sync.push(pathlib.Path("files/app_http"), "/data/app_http/app_http")
