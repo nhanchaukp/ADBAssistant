@@ -16,9 +16,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("ADBServer Installer")
-        self.geometry("600x500")
-        self.minsize(600, 500)
-        self.maxsize(600, 500)
+        # self.geometry("600x500")
 
         self.POLLING_DELAY = 250  # ms
         self.lock = Lock()  # Lock for shared resources.
@@ -98,16 +96,12 @@ class App(tk.Tk):
                 btnReboot.config(state=NORMAL)
                 btnBlinkLed.config(state=NORMAL)
                 btnInstallApk.config(state=NORMAL)
-                btnSetStaticIp.config(state=NORMAL)
-                btnDhcp.config(state=NORMAL)
             else:
                 btnInstAdbServer.config(state=DISABLED)
                 btnCapture.config(state=DISABLED)
                 btnReboot.config(state=DISABLED)
                 btnBlinkLed.config(state=DISABLED)
                 btnInstallApk.config(state=DISABLED)
-                btnSetStaticIp.config(state=DISABLED)
-                btnDhcp.config(state=DISABLED)
             return None
         
         def load_device_info(device):
@@ -117,7 +111,6 @@ class App(tk.Tk):
                 product = self.device.prop.model
                 self.model = product
                 lbDeviceConnected.config(text=product)
-                staticIpValue.set(value=str(self.selected_device).split(":")[0])
                 # print(self.selected_device)
             except errors.AdbError as e:
                 load_device()
@@ -141,52 +134,55 @@ class App(tk.Tk):
             except errors.AdbError as e:
                 push_console("unmount fail")
 
+        def reboot():
+            try:
+                push_console("Rebooting device %s" % self.selected_device)
+                self.device.shell("reboot")
+            except errors.AdbError as e:
+                push_console("Reboot fail")
+
         def install_adb_server():
             pool = ThreadPool(processes=1)
             async_result = pool.apply_async(install_curl)
             async_result = pool.apply_async(install_app_http)
             async_result = pool.apply_async(remove_apps)
+            async_result = pool.apply_async(reboot)
 
         def install_curl():
-            push_console("Installing lib...")
-            mount_system()
+            push_console("Installing lib.")
             try:
-                self.device.sync.push("./files/ipconfigstore", "/system/bin/ipconfigstore")
-                self.device.shell("chmod 777 /system/bin/ipconfigstore")
-                push_console("Installing ipconfigstore...")
-
+                mount_system()
+                push_console("Installing curl...", "")
                 self.device.sync.push("./files/curl-arm", "/system/bin/curl")
                 self.device.shell("chmod 777 /system/bin/curl")
-                push_console("Installing curl...")
-
-                push_console("DONE.\n\n")
+                push_console("done.")
+                unmount_system()
             except errors.AdbError as e:
                 print(e)
                 push_console("FAIL\n\n")
-            unmount_system()
             
         def install_app_http():
-            push_console("Installing app_http...")
-            mount_system()
+            push_console("Installing app_http.")
             # make dir
             try:
+                mount_system()
                 push_console("Create dir /data/app_http...", "")
                 output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
                 push_console("done.")
 
                 # push file
-                push_console("Upload file...")
+                push_console("Upload file...", "")
                 self.device.sync.push("./files/app_http", "/system/bin/app_http")
                 self.device.sync.push("./files/key.pem", "/system/bin/key.pem")
                 self.device.sync.push("./files/cert.pem", "/system/bin/cert.pem")
                 push_console("done.")
 
-                push_console("Chmod file...")
+                push_console("Chmod file...", "")
                 self.device.shell("chmod 777 /system/bin/app_http && chmod 777 /system/bin/key.pem && chmod 777 /system/bin/cert.pem")
                 push_console("done.")
 
                 # settings [--user 0] put global package_verifier_enable 0  
-                push_console("Skip check install new app...")
+                push_console("Disable setting package_verifier_enable...", "")
                 self.device.shell("settings put global package_verifier_enable 0")
                 push_console("done.")
 
@@ -204,13 +200,12 @@ class App(tk.Tk):
                     self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
                     self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
                     self.device.shell("chmod 777 /system/bin/install-recovery.sh")
-                        
                 push_console("ALL DONE.\n\n")
+                # unmount
+                unmount_system()
             except errors.AdbError as e:
                 print(e)
                 push_console("FAIL: {}\n\n".format(e))   
-            # unmount
-            unmount_system()
         
         def remove_apps():
             try:
@@ -317,7 +312,7 @@ class App(tk.Tk):
             return None
         
         def onBtnRebootClick(*args):
-            self.device.shell("reboot")
+            reboot()
             lbStatus.config(text="Device rebooting...")
             return None
         
@@ -330,16 +325,6 @@ class App(tk.Tk):
                 str += "  " + d.serial + " - " + d.state + "\n"
             push_console(str)
 
-        def onBtnScanClick(*args):
-            if utils.valid_ip(vlanValue.get()) == None:
-                messagebox.showerror("Error",  "Vlan IP incorrect!")
-                return None
-            # btnScan.config(state=DISABLED)
-            t = utils.ScanAndroidBox(callback=push_console, vlan=vlanValue.get(), label=lbStatus)
-            t.start()
-            # pool = ThreadPool(processes=1)
-            # async_result = pool.apply_async(lambda: t.start())
-
         def led_blink():
             push_console("Led blinking...", "")
             self.device.shell("i=0; while [ $((i)) -le 10 ]; do i=$(($i+1)); echo $(($i%2)) > /sys/class/leds/green/brightness; sleep 0.5; done")
@@ -348,54 +333,6 @@ class App(tk.Tk):
         def onBtnBlinkLedClick(*args):
             t = Thread(target=led_blink)
             t.start()
-
-        def set_static_ip():
-            push_console("Set static IP %s (WiFi)" % staticIpValue.get())
-            data = """ipAssignment: STATIC
-linkAddress: {}/24
-gateway: 192.168.2.1
-dns: 8.8.8.8
-proxySettings: NONE
-id: 836156484""".format(staticIpValue.get())
-            fout = open("files/ipconfig.conf", "wt")
-            fout.write(data)
-            fout.close()
-            try:
-                # up file
-                push_console("Upload ipconfig.conf...")
-                self.device.sync.push("./files/ipconfig.conf", "/data/misc/wifi/ipconfig.conf")
-                # pack ipconfig
-                push_console("Packing...")
-                self.device.shell("ipconfigstore -p 2 < /data/misc/wifi/ipconfig.conf > /data/misc/wifi/ipconfig.txt")
-
-                # restart wifi
-                push_console("Restart wifi...")
-                self.device.shell("svc wifi disable && sleep 3 && svc wifi enable")
-
-                push_console("DONE.\n\n")
-            except errors.AdbError as e:
-                print(e)
-                push_console("FAIL\n\n")
-
-        def enable_dhcp():
-            try:
-                # up file
-                push_console("Enable DHCP...", "")
-                self.device.shell("rm /data/misc/wifi/ipconfig.txt")
-                push_console("done.")
-            except errors.AdbError as e:
-                print(e)
-                push_console("FAIL\n\n")
-            
-        def onBtnSetStaticIpClick(*args):
-            if utils.valid_ip(staticIpValue.get()) == None:
-                messagebox.showerror("Error",  "Static IP incorrect!")
-                return None
-            pool = ThreadPool(processes=1)
-            async_result = pool.apply_async(set_static_ip)
-
-        def onBtnDhcpClick(*args):
-            enable_dhcp()
 
         def install_apk(file_path):
             lbStatus.config(text="Wait for install apk...")
@@ -436,18 +373,6 @@ id: 836156484""".format(staticIpValue.get())
         lbMsg = Label(top_frame, text="")
         lbMsg.grid(row=0,column=3, padx=10, sticky='we')
 
-        # frame scann IP
-        lbVlan = Label(scan_frame, text="VLAN")
-        lbVlan.grid(row=0,column=0, padx=10, sticky='we')
-        vlanValue = StringVar()
-        # vlanValue.set(value="192.168.2.1")
-        vlanValue.set(value="10.100.120.1")
-        txtVlan = Entry(scan_frame, width=20, textvariable=vlanValue, justify=CENTER)
-        txtVlan.grid(row=0, column=1, sticky='w')
-        btnScan = Button(scan_frame, text="Scan", command=onBtnScanClick)
-        btnScan.grid(row=0, column=2, padx=10, sticky='w')
-        
-
         # Dropdown menu options
         selected = StringVar()
         drop_devices = OptionMenu( drop_frame , selected , None, command=on_selected)
@@ -461,18 +386,6 @@ id: 836156484""".format(staticIpValue.get())
 
         lbDeviceConnected = Label( drop_frame, text="")
         lbDeviceConnected.grid(row=0, column=3, padx=10)
-        
-        # frame set static IP
-        lbStaticIp = Label(staticip_frame, text="Set static IP for WiFi")
-        lbStaticIp.grid(row=0,column=0, padx=10, sticky='we')
-        staticIpValue = StringVar()
-        staticIpValue.set(value="")
-        txtStaticIp = Entry(staticip_frame, width=20, textvariable=staticIpValue, justify=CENTER)
-        txtStaticIp.grid(row=0, column=1, sticky='w')
-        btnSetStaticIp = Button(staticip_frame, text="Set", command=onBtnSetStaticIpClick)
-        btnSetStaticIp.grid(row=0, column=2, padx=10, sticky='w')
-        btnDhcp = Button(staticip_frame, text="Enable DHCP", command=onBtnDhcpClick)
-        btnDhcp.grid(row=0, column=3, padx=[0,10], sticky='w')
 
         # frame button
         btnInstAdbServer = Button(button_frame, text="Install ADBServer", command=onBtnInstAdbServerClick)
@@ -488,7 +401,7 @@ id: 836156484""".format(staticIpValue.get())
         btnReboot.grid(row=0, column=3, padx=[0, 10], sticky='w')
 
         btnBlinkLed = Button(button_frame, text="LED Blink", command=onBtnBlinkLedClick)
-        btnBlinkLed.grid(row=1, column=0, padx=10, sticky='w')
+        btnBlinkLed.grid(row=1, column=0, padx=10, pady=[10, 0], sticky='w')
 
         console = Text(console_frame, width=82, height=16)
         console.pack(side=tk.LEFT, fill=X, padx=10)
