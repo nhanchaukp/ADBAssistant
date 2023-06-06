@@ -16,7 +16,6 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("ADBServer Installer")
-        self.eval('tk::PlaceWindow %s center' % self.winfo_pathname(self.winfo_id()))
         # self.geometry("600x500")
 
         self.POLLING_DELAY = 250  # ms
