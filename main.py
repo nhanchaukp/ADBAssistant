@@ -2,6 +2,7 @@ from tkinter import *
 import os, subprocess, platform
 from datetime import datetime
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, messagebox
 import utils
 from multiprocessing.pool import ThreadPool
@@ -12,11 +13,12 @@ from adbutils import adb, errors, AdbInstallError
 VERSION = 1.0
 CHECKED_VERSION = False
 
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("ADBServer Installer")
-        # self.geometry("600x500")
+class App(ttk.Frame):
+    def __init__(self, parent):
+        ttk.Frame.__init__(self)
+        for index in [0, 1, 2]:
+            self.columnconfigure(index=index, weight=1)
+            self.rowconfigure(index=index, weight=1)
 
         self.POLLING_DELAY = 250  # ms
         self.lock = Lock()  # Lock for shared resources.
@@ -29,31 +31,51 @@ class App(tk.Tk):
         self.device = None
         self.model = None
 
-        top_frame = Frame(self)
-        top_frame.pack(anchor=W, fill=X, pady=10, padx=10)
+        # top_frame = ttk.Frame(self)
+        # top_frame.pack(anchor=W, fill=X, pady=10, padx=10)
 
-        scan_frame = Frame(self)
-        scan_frame.pack(anchor=W, fill=X, pady=[0, 10])
+        top_frame = ttk.LabelFrame(self, text="Nhập IP thiết bị", padding=(20, 10))
+        top_frame.grid(
+            row=0, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+        )
 
-        drop_frame = Frame(self)
-        drop_frame.pack(anchor=W, fill=X, pady=[0, 10])
+        # drop_frame = Frame(self)
+        # drop_frame.pack(anchor=W, fill=X, pady=[0, 10])
 
-        staticip_frame = Frame(self)
-        staticip_frame.pack(anchor=W, fill=X)
+        drop_frame = ttk.LabelFrame(self, text="Chọn thiết bị", padding=(20, 10))
+        drop_frame.grid(
+            row=1, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+        )
+
+        # staticip_frame = Frame(self)
+        # staticip_frame.pack(anchor=W, fill=X)
 
 
-        button_frame = Frame(self)
-        button_frame.config(pady=10)
-        button_frame.pack(anchor=W, fill=X)
+        # button_frame = Frame(self)
+        # button_frame.config(pady=10)
+        # button_frame.pack(anchor=W, fill=X)
 
-        console_frame = Frame(self)
-        console_frame.config(pady=10)
-        console_frame.pack(anchor=W, fill=X)
+        button_frame = ttk.LabelFrame(self, text="Điều khiển", padding=(20, 10))
+        button_frame.grid(
+            row=2, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+        )
+
+        # console_frame = Frame(self)
+        # console_frame.config(pady=10)
+        # console_frame.pack(anchor=W, fill=X)
+        console_frame = ttk.LabelFrame(self, text="Nhật ký", padding=(20, 10))
+        console_frame.grid(
+            row=0, column=1, rowspan=4, padx=(20, 10), pady=10, sticky="nsew"
+        )
 
 
         footer_frame = Frame(self)
         footer_frame.config(pady=10)
-        footer_frame.pack(anchor=W, fill=X, side=BOTTOM)
+        # footer_frame.pack(anchor=W, fill=X, side=BOTTOM)
+        # footer_frame = ttk.LabelFrame(self, text="Thiết bị", padding=(20, 10))
+        footer_frame.grid(
+            row=3, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+        )
 
         def check_update():
             global VERSION, CHECKED_VERSION
@@ -63,7 +85,7 @@ class App(tk.Tk):
             json = utils.get_update_json()
             if json is not None:
                 if float(json["version"]) > float(VERSION):
-                    answer = messagebox.askyesno(title="New version update", message="{}\n\nClick Yes to update.".format(json["changelog"]))
+                    answer = messagebox.askyesno(title="Có bản cập nhật", message="{}\n\nChọn YES để bắt đầu.".format(json["changelog"]))
                     if answer:
                         if platform.system() == 'Darwin':       # macOS
                             url = json["download_url"] + "ADBAssistant.app"
@@ -230,17 +252,17 @@ class App(tk.Tk):
             try:
                 output = adb.connect(address, timeout=10.0)
                 print("connect output: %s" % output)
-                lbMsg.config(text="Connected")
+                lbMsg.config(text="Kết nối thành công")
                 load_device()
             except errors.AdbTimeout as e:
                 messagebox.showerror("Error",  "Connect timeout")
 
         def onBtnConnectClick(*args):
             if ipValue.get() is None or ipValue.get() == "":
-                messagebox.showerror("Error",  "Please input IP")
+                messagebox.showerror("Error",  "Vui lòng nhập IP thiết bị")
                 return None
             if utils.valid_ip(ipValue.get()) == None:
-                messagebox.showerror("Error",  "IP incorrect!")
+                messagebox.showerror("Error",  "IP không hợp lệ")
                 return None
             connect(ipValue.get())
         
@@ -266,7 +288,7 @@ class App(tk.Tk):
                 miss_files.append("ipconfigstore")
             
             if miss_files:
-                push_console("Missing file(s):")
+                push_console("Đang tải tập tin:")
                 with self.lock:
                     self.finished = False
 
@@ -313,14 +335,14 @@ class App(tk.Tk):
         
         def onBtnRebootClick(*args):
             reboot()
-            lbStatus.config(text="Device rebooting...")
+            lbStatus.config(text="Đang khởi động lại...")
             return None
         
         def onBtnRefreshClick(*args):
             load_device()
         
         def onBtnDebugClick(*args):
-            str = "List devices\n"
+            str = "Thiết bị đã kết nối\n"
             for d in adb.list():
                 str += "  " + d.serial + " - " + d.state + "\n"
             push_console(str)
@@ -361,79 +383,77 @@ class App(tk.Tk):
                 selected.set(new_choices[0])
                 self.selected_device = new_choices[0]
                 load_device_info(self.selected_device)
+            # if len(new_choices):
+            #     drop_devices['values'] = new_choices
 
         # frame IP
-        lbIp = Label(top_frame, text="Device IP")
-        lbIp.grid(row=0,column=0, sticky='we')
         ipValue = StringVar()
-        txtIp = Entry(top_frame, width=20, textvariable=ipValue, justify=CENTER)
-        txtIp.grid(row=0, column=1, sticky='w')
-        btnConnect = Button(top_frame, text="Connect", command=onBtnConnectClick)
+        txtIp = ttk.Entry(top_frame, width=20, textvariable=ipValue, justify=CENTER)
+        txtIp.grid(row=0, column=1, sticky='we')
+        btnConnect = ttk.Button(top_frame, text="Kết nối", style='Accent.TButton', command=onBtnConnectClick)
         btnConnect.grid(row=0, column=2, padx=10, sticky='w')
         lbMsg = Label(top_frame, text="")
         lbMsg.grid(row=0,column=3, padx=10, sticky='we')
 
         # Dropdown menu options
         selected = StringVar()
-        drop_devices = OptionMenu( drop_frame , selected , None, command=on_selected)
-        drop_devices.config(width=20)
-        drop_devices.grid(row=0, column=0, padx=10)
+        drop_devices = ttk.OptionMenu( drop_frame , selected , None, command=on_selected)
+        drop_devices.config(width=30)
+        drop_devices.grid(row=1, column=0, padx=(0, 10), sticky="ew")
 
-        btnRefresh = Button(drop_frame, text="Refresh", command=onBtnRefreshClick)
-        btnRefresh.grid(row=0, column=1, padx=[0, 10], sticky='w')
-        btnDebug = Button(drop_frame, text="Debug", command=onBtnDebugClick)
-        btnDebug.grid(row=0, column=2, padx=[0, 10], sticky='w')
+        btnRefresh = ttk.Button(drop_frame, text="Tải lại", command=onBtnRefreshClick)
+        btnRefresh.grid(row=1, column=1, padx=(0, 10), sticky='ew')
+        btnDebug = ttk.Button(drop_frame, text="Debug", command=onBtnDebugClick)
+        btnDebug.grid(row=1, column=2, padx=(0, 10), sticky='ew')
 
-        lbDeviceConnected = Label( drop_frame, text="")
-        lbDeviceConnected.grid(row=0, column=3, padx=10)
+        lbDeviceConnected = ttk.Label( drop_frame, text="")
+        lbDeviceConnected.config(width=20)
+        lbDeviceConnected.grid(row=1, column=3)
 
         # frame button
-        btnInstAdbServer = Button(button_frame, text="Install ADBServer", command=onBtnInstAdbServerClick)
-        btnInstAdbServer.grid(row=0, column=0, padx=10, sticky='w')
+        btnInstAdbServer = ttk.Button(button_frame, text="Cài đặt app_http",style='Accent.TButton', command=onBtnInstAdbServerClick)
+        btnInstAdbServer.grid(row=0, column=0, padx=(0,10), sticky='w')
 
-        btnInstallApk = Button(button_frame, text="Install Apk", command=onBtnInstallApkClick)
+        btnInstallApk = ttk.Button(button_frame, text="Cài đặt APK", command=onBtnInstallApkClick)
         btnInstallApk.grid(row=0, column=1, padx=[0, 10], sticky='w')
 
-        btnCapture = Button(button_frame, text="Take Screenshoot", command=onBtnCaptureClick)
+        btnCapture = ttk.Button(button_frame, text="Chụp màn hình", command=onBtnCaptureClick)
         btnCapture.grid(row=0, column=2, padx=[0, 10], sticky='w')
 
-        btnReboot = Button(button_frame, text="Reboot", command=onBtnRebootClick)
+        btnReboot = ttk.Button(button_frame, text="Khởi động lại", command=onBtnRebootClick)
         btnReboot.grid(row=0, column=3, padx=[0, 10], sticky='w')
 
-        btnBlinkLed = Button(button_frame, text="LED Blink", command=onBtnBlinkLedClick)
-        btnBlinkLed.grid(row=1, column=0, padx=10, pady=[10, 0], sticky='w')
+        btnBlinkLed = ttk.Button(button_frame, text="Chớp đèn nguồn", command=onBtnBlinkLedClick)
+        btnBlinkLed.grid(row=0, column=4, padx=[0, 10], sticky='w')
 
-        console = Text(console_frame, width=82, height=16)
-        console.pack(side=tk.LEFT, fill=X, padx=10)
+        console = Text(console_frame)
+        # console.config(state=DISABLED)
+        console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)
 
-        lbStatus = Label(footer_frame, text="")
+        lbStatus = ttk.Label(footer_frame, text="")
         lbStatus.grid(row=0,column=3, padx=10, sticky='we')
 
         
         load_device()
 
         self.after(1000, check_update)
-        # try:
-        #     # output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
-        #     output = self.device.sync.push(pathlib.Path("files/app_http"), "/data/app_http/app_http")
-        #     print(output)
-        # except errors.AdbError as e:
-        #     print(e)
-        # print(self.device.shell("ls /system/bin | grep curl"))
-        # print(adb.list())
 
-# Check adb exist
-# if check_before() == False:
-#     exit(1)
-
-# Create windows
-# w = Tk()
-# w.title("ADBServer Installer")
-# w.geometry("600x500")
-# w.minsize(600, 500)
-# w.maxsize(600, 500)
-# App(w)
-# w.mainloop()
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    root = tk.Tk()
+    root.title("ADBServer Installer")
+
+    # Simply set the theme
+    root.tk.call("source", "azure.tcl")
+    root.tk.call("set_theme", "dark")
+
+    app = App(root)
+    app.pack(fill="both", expand=True)
+
+    # Set a minsize for the window, and place it in the middle
+    root.update()
+    root.minsize(root.winfo_width(), root.winfo_height())
+    x_cordinate = int((root.winfo_screenwidth() / 2) - (root.winfo_width() / 2))
+    y_cordinate = int((root.winfo_screenheight() / 2) - (root.winfo_height() / 2))
+    root.geometry("+{}+{}".format(x_cordinate, y_cordinate-20))
+
+    root.mainloop()
