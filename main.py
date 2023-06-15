@@ -88,9 +88,9 @@ class App(ttk.Frame):
                     answer = messagebox.askyesno(title="Có bản cập nhật", message="{}\n\nChọn YES để bắt đầu.".format(json["changelog"]))
                     if answer:
                         if platform.system() == 'Darwin':       # macOS
-                            url = json["download_url"] + "mac_ADBAssistant.zip"
+                            url = json["download_url_macos"]
                         elif platform.system() == 'Windows':    # Windows
-                            url = json["download_url"] + "win_ADBAssistant.zip"
+                            url = json["download_url_win"]
                         openfile(url)
 
         def push_console(text, newline = "\n"):
