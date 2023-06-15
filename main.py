@@ -48,6 +48,11 @@ class App(ttk.Frame):
             row=0, column=1, rowspan=4, padx=(20, 10), pady=10, sticky="nsew"
         )
 
+        footer_frame = ttk.Frame(self)
+        footer_frame.grid(
+            row=3, column=0, padx=(20, 10), pady=10, sticky="nsew"
+        )
+
         def check_update():
             global VERSION, CHECKED_VERSION
             if CHECKED_VERSION:
@@ -426,8 +431,9 @@ class App(ttk.Frame):
         console = Text(console_frame)
         console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)
 
-        # lbStatus = ttk.Label(footer_frame, text="")
-        # lbStatus.grid(row=0,column=3, padx=10, sticky='we')
+        str_footer = "Phiên bản: {}".format(VERSION)
+        lbStatus = ttk.Label(footer_frame, text=str_footer)
+        lbStatus.grid(row=0,column=0, padx=(0, 10), sticky='we')
 
         
         load_device()
@@ -437,6 +443,7 @@ class App(ttk.Frame):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("ADBServer Installer")
+    root.iconbitmap('icon.ico')
 
     # Simply set the theme
     root.tk.call("source", "azure.tcl")
