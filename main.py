@@ -30,51 +30,22 @@ class App(ttk.Frame):
         self.selected_device = None
         self.device = None
         self.model = None
-
-        # top_frame = ttk.Frame(self)
-        # top_frame.pack(anchor=W, fill=X, pady=10, padx=10)
-
         top_frame = ttk.LabelFrame(self, text="Nhập IP thiết bị", padding=(20, 10))
         top_frame.grid(
             row=0, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
         )
-
-        # drop_frame = Frame(self)
-        # drop_frame.pack(anchor=W, fill=X, pady=[0, 10])
-
         drop_frame = ttk.LabelFrame(self, text="Chọn thiết bị", padding=(20, 10))
         drop_frame.grid(
             row=1, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
         )
-
-        # staticip_frame = Frame(self)
-        # staticip_frame.pack(anchor=W, fill=X)
-
-
-        # button_frame = Frame(self)
-        # button_frame.config(pady=10)
-        # button_frame.pack(anchor=W, fill=X)
-
         button_frame = ttk.LabelFrame(self, text="Điều khiển", padding=(20, 10))
         button_frame.grid(
             row=2, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
         )
 
-        # console_frame = Frame(self)
-        # console_frame.config(pady=10)
-        # console_frame.pack(anchor=W, fill=X)
         console_frame = ttk.LabelFrame(self, text="Nhật ký", padding=(20, 10))
         console_frame.grid(
             row=0, column=1, rowspan=4, padx=(20, 10), pady=10, sticky="nsew"
-        )
-
-
-        footer_frame = Frame(self)
-        footer_frame.config(pady=10)
-        # footer_frame.pack(anchor=W, fill=X, side=BOTTOM)
-        # footer_frame = ttk.LabelFrame(self, text="Thiết bị", padding=(20, 10))
-        footer_frame.grid(
-            row=3, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
         )
 
         def check_update():
@@ -95,14 +66,20 @@ class App(ttk.Frame):
 
         def push_console(text, newline = "\n"):
             console.insert(END, "{}{}".format(text, newline))
+            console.see(END)
+
+        def start_scrcpy():
+            push_console('Đang mở trình điều khiển cho thiết bị %s.\n [*] Nếu trình điều khiển không hiện lên vui lòng thử lại hoặc chọn Debug để kiểm tra lại kết nối.' % self.selected_device)
+            if platform.system() == 'Darwin':       # macOS
+                subprocess.Popen(['scrcpy', '-s', self.selected_device], stdout=subprocess.PIPE)
+            elif platform.system() == 'Windows':    # Windows
+                subprocess.Popen(['scrcpy.exe', '-s', self.selected_device], shell=True)
 
         def openfile(filepath):
             if platform.system() == 'Darwin':       # macOS
-                subprocess.call(('open', filepath))
+                subprocess.Popen(['open', filepath])
             elif platform.system() == 'Windows':    # Windows
-                subprocess.call(('start', filepath))
-            else:                                   # linux variants
-                subprocess.call(('xdg-open', filepath))
+                subprocess.Popen(['start', filepath], shell=True)
 
         def load_device():
             devices = []
@@ -118,12 +95,14 @@ class App(ttk.Frame):
                 btnReboot.config(state=NORMAL)
                 btnBlinkLed.config(state=NORMAL)
                 btnInstallApk.config(state=NORMAL)
+                btnScreenRemote.config(state=NORMAL)
             else:
                 btnInstAdbServer.config(state=DISABLED)
                 btnCapture.config(state=DISABLED)
                 btnReboot.config(state=DISABLED)
                 btnBlinkLed.config(state=DISABLED)
                 btnInstallApk.config(state=DISABLED)
+                btnScreenRemote.config(state=DISABLED)
             return None
         
         def load_device_info(device):
@@ -181,7 +160,7 @@ class App(ttk.Frame):
                 unmount_system()
             except errors.AdbError as e:
                 print(e)
-                push_console("FAIL\n\n")
+                push_console("FAIL. Cần làm lại từ đầu!\n\n")
             
         def install_app_http():
             push_console("Installing app_http.")
@@ -227,27 +206,25 @@ class App(ttk.Frame):
                 unmount_system()
             except errors.AdbError as e:
                 print(e)
-                push_console("FAIL: {}\n\n".format(e))   
+                push_console("FAIL {}. Cần làm lại từ đầu!\n\n".format(e))   
         
         def remove_apps():
             try:
-                push_console("Remove app Facebook...", "")
-                output = self.device.shell("pm uninstall -k --user 0 com.facebook.katana", timeout=1)
+                push_console("Gỡ cài đặt XBos...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience")
                 push_console("done.")
-                push_console("Remove app Skype...", "")
-                output = self.device.shell("pm uninstall -k --user 0 com.skype.raider", timeout=1)
+                push_console("Gỡ cài đặt Facebook...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.facebook.katana", timeout=10)
                 push_console("done.")
-                push_console("Remove app OTA Upgrade...", "")
-                output = self.device.shell("pm uninstall -k --user 0 com.himedia.hmdupgrade", timeout=1)
+                push_console("Gỡ cài đặt Skype...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.skype.raider", timeout=10)
                 push_console("done.")
-                push_console("Remove app HiMediaTV...", "")
-                output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=1)
+                push_console("Gỡ cài đặt OTA Upgrade...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.himedia.hmdupgrade", timeout=10)
                 push_console("done.")
-                push_console("Remove app XBos...", "")
-                output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience", timeout=1)
+                push_console("Gỡ cài đặt HiMediaTV...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=10)
                 push_console("done.")
-
-                
 
                 push_console("ALL DONE.\n\n")
             except errors.AdbError as e:
@@ -260,7 +237,7 @@ class App(ttk.Frame):
                 lbMsg.config(text="Kết nối thành công")
                 load_device()
             except errors.AdbTimeout as e:
-                messagebox.showerror("Error",  "Connect timeout")
+                messagebox.showerror("Error",  "Không thể kết nối thiết bị")
 
         def onBtnConnectClick(*args):
             if ipValue.get() is None or ipValue.get() == "":
@@ -271,11 +248,11 @@ class App(ttk.Frame):
                 return None
             connect(ipValue.get())
         
-        def update_finish(val):
-            self.finished = val
+        # def update_finish(val):
+        #     self.finished = val
 
-        def update_download_status(val):
-            self.download_success = val
+        # def update_download_status(val):
+        #     self.download_success = val
 
         def onBtnInstAdbServerClick(*args):
             if not os.path.isdir("files"):
@@ -289,48 +266,50 @@ class App(ttk.Frame):
                 miss_files.append("key.pem")
             if os.path.exists("files/cert.pem") == False:
                 miss_files.append("cert.pem")
-            if os.path.exists("files/ipconfigstore") == False:
-                miss_files.append("ipconfigstore")
             
             if miss_files:
-                push_console("Đang tải tập tin:")
-                with self.lock:
-                    self.finished = False
+                str = ""
+                for file in miss_files:
+                    str += "- %s \n" % file
+                push_console("Thiếu tập tin:\n - %s" % str)
+                # push_console("Đang tải tập tin:")
+                # with self.lock:
+                #     self.finished = False
 
-                download_thread = utils.DownloadFile(filelist=miss_files, label=lbStatus, 
-                                                     update_download_status = update_download_status, 
-                                                     update_finish=update_finish, 
-                                                     callback=push_console)
-                download_thread.daemon = True
-                self.after(self.POLLING_DELAY, monitor_download)
-                download_thread.start()
+                # download_thread = utils.DownloadFile(filelist=miss_files, label=lbStatus, 
+                #                                      update_download_status = update_download_status, 
+                #                                      update_finish=update_finish, 
+                #                                      callback=push_console)
+                # download_thread.daemon = True
+                # self.after(self.POLLING_DELAY, monitor_download)
+                # download_thread.start()
             else:
                 install_adb_server()
 
 
-        def monitor_download():
-            print(self.finished)
-            with self.lock:
-                if not self.finished:
-                    self.after(self.POLLING_DELAY, monitor_download)  # Keep polling.
-                else:
-                    print(self.download_success)
-                    if self.download_success:
-                        # download success => install file
-                        install_adb_server()
-                    else:
-                        push_console("Error while download file!.")
+        # def monitor_download():
+        #     print(self.finished)
+        #     with self.lock:
+        #         if not self.finished:
+        #             self.after(self.POLLING_DELAY, monitor_download)  # Keep polling.
+        #         else:
+        #             print(self.download_success)
+        #             if self.download_success:
+        #                 # download success => install file
+        #                 install_adb_server()
+        #             else:
+        #                 push_console("Error while download file!.")
                     
         def takescreenshoot():
             if os.path.isdir("screenshoots") == False:
                 os.makedirs("screenshoots")
-            push_console("Taking screenshoot...", "")
+            push_console("Đang chụp màn hình...", "")
             now = datetime.now()
             timestr = now.strftime("%d-%m-%Y-%H-%M-%S")
             filename = "screenshoots/{}-{}.png".format(self.model, timestr)
             self.device.shell("screencap -p /sdcard/screenshot.png")
             self.device.sync.pull("/sdcard/screenshot.png", filename)
-            push_console("saved %s" % filename)
+            push_console("done. %s" % filename)
             openfile(filename)
 
         def onBtnCaptureClick(*args):
@@ -340,7 +319,7 @@ class App(ttk.Frame):
         
         def onBtnRebootClick(*args):
             reboot()
-            lbStatus.config(text="Đang khởi động lại...")
+            push_console("Đang khởi động lại...")
             return None
         
         def onBtnRefreshClick(*args):
@@ -349,11 +328,15 @@ class App(ttk.Frame):
         def onBtnDebugClick(*args):
             str = "Thiết bị đã kết nối\n"
             for d in adb.list():
-                str += "  " + d.serial + " - " + d.state + "\n"
+                if 'offline' in d.state:
+                    state = "cần khởi động lại!"
+                else:
+                    state = "đã kết nối"
+                str += "  " + d.serial + " - " + state + "\n"
             push_console(str)
 
         def led_blink():
-            push_console("Led blinking...", "")
+            push_console("Đang nháy đèn 10 lần...", "")
             self.device.shell("i=0; while [ $((i)) -le 10 ]; do i=$(($i+1)); echo $(($i%2)) > /sys/class/leds/green/brightness; sleep 0.5; done")
             push_console("done.")
 
@@ -361,13 +344,16 @@ class App(ttk.Frame):
             t = Thread(target=led_blink)
             t.start()
 
+        def onBtnScreenRemote(*args):
+            start_scrcpy()
+
         def install_apk(file_path):
-            lbStatus.config(text="Wait for install apk...")
+            push_console("Đang cài đặt {}...".format(file_path))
             try:
                 output = self.device.install(file_path)
-                push_console("Install {} success.".format(file_path))
+                push_console('hoàn tất.')
             except AdbInstallError as e:
-                push_console("Error install apk! %s" % e)
+                push_console("error: %s" % e)
 
         def onBtnInstallApkClick():
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
@@ -431,12 +417,14 @@ class App(ttk.Frame):
         btnBlinkLed = ttk.Button(button_frame, text="Chớp đèn nguồn", command=onBtnBlinkLedClick)
         btnBlinkLed.grid(row=0, column=4, padx=[0, 10], sticky='w')
 
+        btnScreenRemote = ttk.Button(button_frame, text="Điều khiển", command=onBtnScreenRemote)
+        btnScreenRemote.grid(row=1, column=0, padx=[0, 10], pady=[10, 0], sticky='w')
+
         console = Text(console_frame)
-        # console.config(state=DISABLED)
         console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)
 
-        lbStatus = ttk.Label(footer_frame, text="")
-        lbStatus.grid(row=0,column=3, padx=10, sticky='we')
+        # lbStatus = ttk.Label(footer_frame, text="")
+        # lbStatus.grid(row=0,column=3, padx=10, sticky='we')
 
         
         load_device()
