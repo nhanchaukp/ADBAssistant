@@ -32,15 +32,15 @@ class App(ttk.Frame):
         self.model = None
         top_frame = ttk.LabelFrame(self, text="Nhập IP thiết bị", padding=(20, 10))
         top_frame.grid(
-            row=0, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+            row=0, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
         drop_frame = ttk.LabelFrame(self, text="Chọn thiết bị", padding=(20, 10))
         drop_frame.grid(
-            row=1, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+            row=1, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
         button_frame = ttk.LabelFrame(self, text="Điều khiển", padding=(20, 10))
         button_frame.grid(
-            row=2, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew"
+            row=2, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
 
         console_frame = ttk.LabelFrame(self, text="Nhật ký", padding=(20, 10))
@@ -234,10 +234,13 @@ class App(ttk.Frame):
             try:
                 output = adb.connect(address, timeout=10.0)
                 print("connect output: %s" % output)
-                lbMsg.config(text="Kết nối thành công")
-                load_device()
-            except:
-                messagebox.showerror("Error",  "Không thể kết nối thiết bị")
+                if 'connected' in output:
+                    lbMsg.config(text="Kết nối thành công.")
+                else:
+                    lbMsg.config(text="Không thể kết nối.")
+                    load_device()
+            except errors.AdbTimeout as e:
+                messagebox.showerror("Error",  "Quá thời gian kết nối")
 
         def onBtnConnectClick(*args):
             if ipValue.get() is None or ipValue.get() == "":
