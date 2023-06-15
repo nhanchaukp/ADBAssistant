@@ -236,7 +236,7 @@ class App(ttk.Frame):
                 print("connect output: %s" % output)
                 lbMsg.config(text="Kết nối thành công")
                 load_device()
-            except errors.AdbTimeout as e:
+            except:
                 messagebox.showerror("Error",  "Không thể kết nối thiết bị")
 
         def onBtnConnectClick(*args):
