@@ -193,18 +193,25 @@ class App(ttk.Frame):
                 push_console("done.")
 
                 check_recovery = self.device.shell("ls /system/bin | grep 'install-recovery.sh'")
-                if 'install-recovery.sh' in check_recovery:
+                if 'install-recovery.sh' in check_recovery: # file exist in system/bin
                     push_console('found install-recovery.sh in /system/bin')
-                    output = self.device.shell("cat /system/bin/install-recovery.sh | grep app_http")
+                    output = self.device.shell("cat /system/bin/install-recovery.sh")
                     if "app_http" not in output:
                         push_console("Installing app_http as system service...")
                         self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
                     else:
                         push_console("app_http already installed")  
-                else:
+
+                    if "busybox nc -lp 48069" not in output:
+                        push_console("Start port 48069 on boot...")
+                        # nc port 48069 -> for check box else tv
+                        self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
+                else: # file not exist in system/bin
                     push_console('install-recovery.sh not found in /system/bin... create it')
                     self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
                     self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                    # nc port 48069 -> for check box else tv
+                    self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
                     self.device.shell("chmod 777 /system/bin/install-recovery.sh")
                 push_console("ALL DONE.\n\n")
                 # unmount
