@@ -442,8 +442,9 @@ class App(ttk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("ADBServer Installer")
-    root.iconbitmap('icon.ico')
+    root.title("ADB Assistant")
+    if platform.system() == 'Windows':    # Windows
+        root.iconbitmap('icon.ico')
 
     # Simply set the theme
     root.tk.call("source", "azure.tcl")
