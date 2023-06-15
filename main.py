@@ -234,7 +234,7 @@ class App(ttk.Frame):
             try:
                 output = adb.connect(address, timeout=10.0)
                 print("connect output: %s" % output)
-                if 'connected' in output:
+                if 'connected to' in output:
                     lbMsg.config(text="Kết nối thành công.")
                 else:
                     lbMsg.config(text="Không thể kết nối.")
