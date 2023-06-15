@@ -243,7 +243,7 @@ class App(ttk.Frame):
                 push_console("Remove app HiMediaTV...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=1)
                 push_console("done.")
-                push_console("Remove app XBox...", "")
+                push_console("Remove app XBos...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience", timeout=1)
                 push_console("done.")
 
