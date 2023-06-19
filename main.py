@@ -377,6 +377,7 @@ class App(ttk.Frame):
                 async_result = pool.apply_async(install_apk, [file_path])
 
         def onBtnInstallMwgTvc(*args):
+            push_console("Bạn cũng có thể tải MWG_TVC.apk bản mới tại https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk\nSau đó chép đè vào thư mục files.")
             install_apk('files/MWG_TVC.apk')
 
         def loadOptionMenu(new_choices):
