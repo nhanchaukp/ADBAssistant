@@ -370,11 +370,14 @@ class App(ttk.Frame):
             except AdbInstallError as e:
                 push_console("error: %s" % e)
 
-        def onBtnInstallApkClick():
+        def onBtnInstallApkClick(*args):
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
             if file_path != "":
                 pool = ThreadPool(processes=1)
                 async_result = pool.apply_async(install_apk, [file_path])
+
+        def onBtnInstallMwgTvc(*args):
+            install_apk('files/MWG_TVC.apk')
 
         def loadOptionMenu(new_choices):
             # Reset var and delete all old options
@@ -423,17 +426,20 @@ class App(ttk.Frame):
         btnInstallApk = ttk.Button(button_frame, text="Cài đặt APK", command=onBtnInstallApkClick)
         btnInstallApk.grid(row=0, column=1, padx=[0, 10], sticky='w')
 
+        btnInstallMwgTvc = ttk.Button(button_frame, text="Cài đặt MWG_TVC", command=onBtnInstallMwgTvc)
+        btnInstallMwgTvc.grid(row=0, column=2, padx=[0, 10], sticky='w')
+
         btnCapture = ttk.Button(button_frame, text="Chụp màn hình", command=onBtnCaptureClick)
-        btnCapture.grid(row=0, column=2, padx=[0, 10], sticky='w')
+        btnCapture.grid(row=0, column=3, padx=[0, 10], sticky='w')
 
         btnReboot = ttk.Button(button_frame, text="Khởi động lại", command=onBtnRebootClick)
-        btnReboot.grid(row=0, column=3, padx=[0, 10], sticky='w')
+        btnReboot.grid(row=0, column=4, padx=[0, 10], sticky='w')
 
         btnBlinkLed = ttk.Button(button_frame, text="Chớp đèn nguồn", command=onBtnBlinkLedClick)
-        btnBlinkLed.grid(row=0, column=4, padx=[0, 10], sticky='w')
+        btnBlinkLed.grid(row=1, column=0, padx=[0, 10], pady=(10, 0), sticky='w')
 
         btnScreenRemote = ttk.Button(button_frame, text="Điều khiển", command=onBtnScreenRemote)
-        btnScreenRemote.grid(row=1, column=0, padx=[0, 10], pady=[10, 0], sticky='w')
+        btnScreenRemote.grid(row=1, column=1, padx=[0, 10], pady=[10, 0], sticky='w')
 
         console = Text(console_frame)
         console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)
