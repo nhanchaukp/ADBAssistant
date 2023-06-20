@@ -382,6 +382,13 @@ class App(ttk.Frame):
             push_console("Bạn cũng có thể tải MWG_TVC.apk bản mới tại https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk\nSau đó chép đè vào thư mục files.")
             install_apk('files/MWG_TVC.apk')
 
+        def onBtnReCheck(*args):
+            version = utils.recheck_version(self.selected_device)
+            if version != None:
+                push_console("Cài đặt thành công. Phiên bản: {}".format(version))
+            else:
+                push_console("Không thể kiểm tra dịch vụ")
+
         def loadOptionMenu(new_choices):
             # Reset var and delete all old options
             selected.set('')
@@ -443,6 +450,9 @@ class App(ttk.Frame):
 
         btnScreenRemote = ttk.Button(button_frame, text="Điều khiển", command=onBtnScreenRemote)
         btnScreenRemote.grid(row=1, column=1, padx=[0, 10], pady=[10, 0], sticky='w')
+
+        btnReCheck = ttk.Button(button_frame, text="Kiểm tra lại", command=onBtnReCheck)
+        btnReCheck.grid(row=1, column=2, padx=[0, 10], pady=[10, 0], sticky='w')
 
         console = Text(console_frame)
         console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)

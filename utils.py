@@ -11,6 +11,18 @@ def get_update_json():
             return json.loads(r.content)
     except:
         return None
+    
+def recheck_version(ip):
+    url = "https://{}/version".format(ip).replace(':5555', ':8443')
+    print(url)
+    try:
+        with requests.post(url, verify=False, timeout=3, headers={
+            "Authorization": "Basic YWRtaW46bXdnMjAyNDMqQCghKik=",
+            "Content-Type": "text/plain"
+        }) as r:
+            return r.text
+    except:
+        return None
         
 class DownloadFile(Thread):
     # constructor
