@@ -102,6 +102,7 @@ class App(ttk.Frame):
                 btnInstallApk.config(state=NORMAL)
                 btnScreenRemote.config(state=NORMAL)
                 btnInstallMwgTvc.config(state=NORMAL)
+                btnReCheck.config(state=NORMAL)
             else:
                 btnInstAdbServer.config(state=DISABLED)
                 btnCapture.config(state=DISABLED)
@@ -110,6 +111,7 @@ class App(ttk.Frame):
                 btnInstallApk.config(state=DISABLED)
                 btnScreenRemote.config(state=DISABLED)
                 btnInstallMwgTvc.config(state=DISABLED)
+                btnReCheck.config(state=DISABLED)
             return None
         
         def load_device_info(device):
