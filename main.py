@@ -94,6 +94,7 @@ class App(ttk.Frame):
                 else:
                     adb.disconnect(d.serial)
             loadOptionMenu(devices)
+
             if self.selected_device:
                 btnInstAdbServer.config(state=NORMAL)
                 btnCapture.config(state=NORMAL)
@@ -116,18 +117,19 @@ class App(ttk.Frame):
         
         def load_device_info(device):
             try:
-                self.device = adb.device(serial=self.selected_device)
-                self.device.root()
-                product = self.device.prop.model
-                self.model = product
-                lbDeviceConnected.config(text=product)
+                if device is not None:
+                    self.device = adb.device(serial=device)
+                    self.device.root()
+                    product = self.device.prop.model
+                    self.model = product
+                    lbDeviceConnected.config(text=product)
                 # print(self.selected_device)
             except errors.AdbError as e:
                 load_device()
             return None
 
         def on_selected(*args):
-            self.selected_device=selected.get()
+            self.selected_device=drop_devices.get()
             load_device_info(self.selected_device)
         
         def mount_system():
@@ -155,8 +157,6 @@ class App(ttk.Frame):
             pool = ThreadPool(processes=1)
             async_result = pool.apply_async(install_curl)
             async_result = pool.apply_async(install_app_http)
-            async_result = pool.apply_async(remove_apps)
-            async_result = pool.apply_async(reboot)
 
         def install_curl():
             push_console("Installing lib.")
@@ -217,9 +217,15 @@ class App(ttk.Frame):
                     # nc port 48069 -> for check box else tv
                     self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
                     self.device.shell("chmod 777 /system/bin/install-recovery.sh")
-                push_console("ALL DONE.\n\n")
+                push_console("ALL DONE.")
                 # unmount
                 unmount_system()
+
+                # remove app & reboot
+                push_console("\nRemove app.")
+                pool = ThreadPool(processes=1)
+                pool.apply_async(remove_apps)
+                pool.apply_async(reboot)
             except errors.AdbError as e:
                 print(e)
                 push_console("FAIL {}. Cần làm lại từ đầu!\n\n".format(e))   
@@ -248,15 +254,17 @@ class App(ttk.Frame):
 
         def connect(address):
             try:
+                address = address.strip()
                 output = adb.connect(address, timeout=10.0)
                 print("connect output: %s" % output)
                 if 'connected to' in output:
                     lbMsg.config(text="Kết nối thành công.")
                 else:
                     lbMsg.config(text="Không thể kết nối.")
-                    load_device()
             except errors.AdbTimeout as e:
                 messagebox.showerror("Error",  "Quá thời gian kết nối")
+            load_device()
+            
 
         def onBtnConnectClick(*args):
             if ipValue.get() is None or ipValue.get() == "":
@@ -274,6 +282,7 @@ class App(ttk.Frame):
         #     self.download_success = val
 
         def onBtnInstAdbServerClick(*args):
+            lbDeviceConnected.config(text="") # remove text device connected
             if not os.path.isdir("files"):
                 os.makedirs("files")
             miss_files = []
@@ -394,19 +403,25 @@ class App(ttk.Frame):
 
         def loadOptionMenu(new_choices):
             # Reset var and delete all old options
-            selected.set('')
-            drop_devices['menu'].delete(0, 'end')
+            # selected.set('')
+            # drop_devices['menu'].delete(0, 'end')
+            drop_devices['values'] = []
 
             # Insert list of new options (tk._setit hooks them up to var)
             # print(new_choices)
             if len(new_choices): 
-                for choice in new_choices:
-                    drop_devices['menu'].add_command(label=choice, command=tk._setit(selected, choice, on_selected))
-                selected.set(new_choices[0])
+                drop_devices['values'] = new_choices
+                drop_devices.current(0)
+                # load_device()
+                # for choice in new_choices:
+                #     drop_devices['menu'].add_command(label=choice, command=tk._setit(selected, choice, on_selected))
+                # drop_devices.set(new_choices[0])
                 self.selected_device = new_choices[0]
                 load_device_info(self.selected_device)
             # if len(new_choices):
             #     drop_devices['values'] = new_choices
+            else:
+                drop_devices.set("")
 
         # frame IP
         ipValue = StringVar()
@@ -418,8 +433,8 @@ class App(ttk.Frame):
         lbMsg.grid(row=0,column=3, padx=10, sticky='we')
 
         # Dropdown menu options
-        selected = StringVar()
-        drop_devices = ttk.OptionMenu( drop_frame , selected , None, command=on_selected)
+        drop_devices = ttk.Combobox( drop_frame)
+        drop_devices.bind("<<ComboboxSelected>>", on_selected)
         drop_devices.config(width=30)
         drop_devices.grid(row=1, column=0, padx=(0, 10), sticky="ew")
 
@@ -454,7 +469,7 @@ class App(ttk.Frame):
         btnScreenRemote = ttk.Button(button_frame, text="Điều khiển", command=onBtnScreenRemote)
         btnScreenRemote.grid(row=1, column=1, padx=[0, 10], pady=[10, 0], sticky='w')
 
-        btnReCheck = ttk.Button(button_frame, text="Kiểm tra lại", command=onBtnReCheck)
+        btnReCheck = ttk.Button(button_frame, text="Kiểm tra lại cài đặt", command=onBtnReCheck)
         btnReCheck.grid(row=1, column=2, padx=[0, 10], pady=[10, 0], sticky='w')
 
         console = Text(console_frame)
