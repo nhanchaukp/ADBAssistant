@@ -254,7 +254,6 @@ class App(ttk.Frame):
 
         def connect(address):
             try:
-                address = address.strip()
                 output = adb.connect(address, timeout=10.0)
                 print("connect output: %s" % output)
                 if 'connected to' in output:
@@ -267,13 +266,14 @@ class App(ttk.Frame):
             
 
         def onBtnConnectClick(*args):
-            if ipValue.get() is None or ipValue.get() == "":
+            ipVal = ipValue.get().strip()
+            if ipVal is None or ipVal == "":
                 messagebox.showerror("Error",  "Vui lòng nhập IP thiết bị")
                 return None
-            if utils.valid_ip(ipValue.get()) == None:
+            if utils.valid_ip(ipVal) == None:
                 messagebox.showerror("Error",  "IP không hợp lệ")
                 return None
-            connect(ipValue.get())
+            connect(ipVal)
         
         # def update_finish(val):
         #     self.finished = val
@@ -282,7 +282,7 @@ class App(ttk.Frame):
         #     self.download_success = val
 
         def onBtnInstAdbServerClick(*args):
-            lbDeviceConnected.config(text="") # remove text device connected
+            lbMsg.config(text="") # remove text device connected
             if not os.path.isdir("files"):
                 os.makedirs("files")
             miss_files = []
