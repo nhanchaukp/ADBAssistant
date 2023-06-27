@@ -60,9 +60,9 @@ class App(ttk.Frame):
         def start_scrcpy():
             push_console('Đang mở trình điều khiển cho thiết bị %s.\n [*] Nếu trình điều khiển không hiện lên vui lòng thử lại hoặc chọn Debug để kiểm tra lại kết nối.' % self.selected_device)
             if platform.system() == 'Darwin':       # macOS
-                subprocess.Popen(['scrcpy', '-s', self.selected_device], stdout=subprocess.PIPE)
+                subprocess.Popen(['lib/scrcpy', '-s', self.selected_device], stdout=subprocess.PIPE)
             elif platform.system() == 'Windows':    # Windows
-                subprocess.Popen(['scrcpy.exe', '-s', self.selected_device], shell=True)
+                subprocess.Popen(['lib\scrcpy.exe', '-s', self.selected_device], shell=True)
 
         def openfile(filepath):
             if platform.system() == 'Darwin':       # macOS
