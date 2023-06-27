@@ -514,7 +514,7 @@ if __name__ == "__main__":
 
 
     menubar = Menu(root)
-    filemenu = Menu(menubar, tearoff=0)
+    filemenu = Menu(menubar, tearoff=0, type="menubar")
     filemenu.add_command(label="Thoát", command=root.quit, accelerator="Ctrl+Q")
     menubar.add_cascade(label="Hệ thống", menu=filemenu)
 
@@ -523,9 +523,7 @@ if __name__ == "__main__":
     menubar.add_cascade(label="Tiện ích", menu=utilmenu)
 
     supportmenu = Menu(menubar, tearoff=0)
-    supportmenu.add_command(label="Giới thiệu", command=lambda: messagebox.showinfo(title="Giới thiệu", message=f"ADBAssistant\n\n \
-                                                                                    Phiên bản: {VERSION}\n \
-                                                                                    Liên hệ báo lỗi: 48069"))
+    supportmenu.add_command(label="Giới thiệu", command=lambda: messagebox.showinfo(title="Giới thiệu", message=f"ADBAssistant\n\nPhiên bản: {VERSION}\nLiên hệ báo lỗi: 48069"))
     supportmenu.add_command(label="Kiểm tra cập nhật", command=lambda:check_update(True))
     menubar.add_cascade(label="Hỗ trợ", menu=supportmenu)
     root.bind("<Control-q>", root.quit)
