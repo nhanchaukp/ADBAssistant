@@ -1,5 +1,11 @@
-import os, requests, re, socket, json
+import os, requests, re, socket, json, platform, subprocess
 from threading import Thread
+
+def openfile(filepath):
+    if platform.system() == 'Darwin':       # macOS
+        subprocess.Popen(['open', filepath])
+    elif platform.system() == 'Windows':    # Windows
+        subprocess.Popen(['start', filepath], shell=True)
 
 def valid_ip(ip):
     return re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ip)

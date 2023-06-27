@@ -53,22 +53,6 @@ class App(ttk.Frame):
             row=3, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
 
-        def check_update():
-            global VERSION, CHECKED_VERSION
-            if CHECKED_VERSION:
-                return None
-            CHECKED_VERSION = True
-            json = utils.get_update_json()
-            if json is not None:
-                if float(json["version"]) > float(VERSION):
-                    answer = messagebox.askyesno(title="Có bản cập nhật", message="{}\n\nChọn YES để bắt đầu.".format(json["changelog"]))
-                    if answer:
-                        if platform.system() == 'Darwin':       # macOS
-                            url = json["download_url_macos"]
-                        elif platform.system() == 'Windows':    # Windows
-                            url = json["download_url_win"]
-                        openfile(url)
-
         def push_console(text, newline = "\n"):
             console.insert(END, "{}{}".format(text, newline))
             console.see(END)
@@ -253,16 +237,21 @@ class App(ttk.Frame):
                 push_console("FAIL: {}\n\n".format(e))   
 
         def connect(address):
+            btnConnect.config(text="Đang kết nối...")
             try:
-                output = adb.connect(address, timeout=10.0)
+                output = adb.connect(address, timeout=5)
                 print("connect output: %s" % output)
                 if 'connected to' in output:
+                    drop_devices.focus()
                     lbMsg.config(text="Kết nối thành công.")
                 else:
                     lbMsg.config(text="Không thể kết nối.")
+                    txtIp.focus()
             except errors.AdbTimeout as e:
                 messagebox.showerror("Error",  "Quá thời gian kết nối")
+                txtIp.focus()
             load_device()
+            btnConnect.config(text="Kết nối")
             
 
         def onBtnConnectClick(*args):
@@ -273,7 +262,8 @@ class App(ttk.Frame):
             if utils.valid_ip(ipVal) == None:
                 messagebox.showerror("Error",  "IP không hợp lệ")
                 return None
-            connect(ipVal)
+            pool = ThreadPool(processes=1)
+            pool.apply_async(connect, [ipVal])
         
         # def update_finish(val):
         #     self.finished = val
@@ -433,7 +423,7 @@ class App(ttk.Frame):
         lbMsg.grid(row=0,column=3, padx=10, sticky='we')
 
         # Dropdown menu options
-        drop_devices = ttk.Combobox( drop_frame)
+        drop_devices = ttk.Combobox(drop_frame, state="readonly")
         drop_devices.bind("<<ComboboxSelected>>", on_selected)
         drop_devices.config(width=30)
         drop_devices.grid(row=1, column=0, padx=(0, 10), sticky="ew")
@@ -484,6 +474,24 @@ class App(ttk.Frame):
 
         self.after(1000, check_update)
 
+def check_update(force = False):
+    global VERSION, CHECKED_VERSION
+    if CHECKED_VERSION and force is False:
+        return None
+    CHECKED_VERSION = True
+    json = utils.get_update_json()
+    if json is not None:
+        if float(json["version"]) > float(VERSION):
+            answer = messagebox.askyesno(title="Có bản cập nhật", message="{}\n\nChọn YES để bắt đầu.".format(json["changelog"]))
+            if answer:
+                if platform.system() == 'Darwin':       # macOS
+                    url = json["download_url_macos"]
+                elif platform.system() == 'Windows':    # Windows
+                    url = json["download_url_win"]
+                utils.openfile(url)
+    elif force == True:
+        messagebox.showinfo(title="Kiểm tra cập nhật", message="Bạn đang dùng phiên bản mới nhất")
+
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("ADB Assistant")
@@ -504,4 +512,22 @@ if __name__ == "__main__":
     y_cordinate = int((root.winfo_screenheight() / 2) - (root.winfo_height() / 2))
     root.geometry("+{}+{}".format(x_cordinate, y_cordinate-20))
 
+
+    menubar = Menu(root)
+    filemenu = Menu(menubar, tearoff=0)
+    filemenu.add_command(label="Thoát", command=root.quit, accelerator="Ctrl+Q")
+    menubar.add_cascade(label="Hệ thống", menu=filemenu)
+
+    utilmenu = Menu(menubar, tearoff=0)
+    utilmenu.add_command(label="Tải MWG_TVC.apk", command=lambda: utils.openfile("https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk"))
+    menubar.add_cascade(label="Tiện ích", menu=utilmenu)
+
+    supportmenu = Menu(menubar, tearoff=0)
+    supportmenu.add_command(label="Giới thiệu", command=lambda: messagebox.showinfo(title="Giới thiệu", message=f"ADBAssistant\n\n \
+                                                                                    Phiên bản: {VERSION}\n \
+                                                                                    Liên hệ báo lỗi: 48069"))
+    supportmenu.add_command(label="Kiểm tra cập nhật", command=lambda:check_update(True))
+    menubar.add_cascade(label="Hỗ trợ", menu=supportmenu)
+    root.bind("<Control-q>", exit)
+    root.config(menu=menubar)
     root.mainloop()
