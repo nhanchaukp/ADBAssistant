@@ -10,7 +10,7 @@ from threading import Thread, Lock
 from time import sleep
 from adbutils import adb, errors, AdbInstallError
 
-VERSION = 1.2
+VERSION = 1.3
 CHECKED_VERSION = False
 
 class App(ttk.Frame):
