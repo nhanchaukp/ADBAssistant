@@ -528,6 +528,6 @@ if __name__ == "__main__":
                                                                                     Liên hệ báo lỗi: 48069"))
     supportmenu.add_command(label="Kiểm tra cập nhật", command=lambda:check_update(True))
     menubar.add_cascade(label="Hỗ trợ", menu=supportmenu)
-    root.bind("<Control-q>", exit)
+    root.bind("<Control-q>", root.quit)
     root.config(menu=menubar)
     root.mainloop()
