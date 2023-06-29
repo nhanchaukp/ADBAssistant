@@ -212,9 +212,9 @@ class App(ttk.Frame):
                 self.device.shell("chmod 777 /system/bin/install-recovery.sh")
                 push_console("done.")
                 
-                push_console("ALL DONE.")
                 # unmount
                 unmount_system()
+                push_console("=== ALL DONE ===\n\n")
 
                 # reboot
                 pool = ThreadPool(processes=1)
@@ -240,8 +240,6 @@ class App(ttk.Frame):
                 push_console("Gỡ cài đặt HiMediaTV...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=10)
                 push_console("done.")
-
-                push_console("ALL DONE.\n\n")
             except errors.AdbError as e:
                 push_console("FAIL: {}\n\n".format(e))   
 
