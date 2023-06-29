@@ -1,5 +1,5 @@
 from tkinter import *
-import os, subprocess, platform
+import os, subprocess, platform, pathlib
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
@@ -139,15 +139,16 @@ class App(ttk.Frame):
 
         def install_adb_server():
             pool = ThreadPool(processes=1)
-            async_result = pool.apply_async(install_curl)
-            async_result = pool.apply_async(install_app_http)
+            pool.apply_async(remove_apps)
+            pool.apply_async(install_curl)
+            pool.apply_async(install_app_http)
 
         def install_curl():
             push_console("Installing lib.")
             try:
                 mount_system()
                 push_console("Installing curl...", "")
-                self.device.sync.push("./files/curl-arm", "/system/bin/curl")
+                self.device.sync.push(pathlib.Path("./files/curl-arm"), "/system/bin/curl")
                 self.device.shell("chmod 777 /system/bin/curl")
                 push_console("done.")
                 unmount_system()
@@ -160,15 +161,15 @@ class App(ttk.Frame):
             # make dir
             try:
                 mount_system()
-                push_console("Create dir /data/app_http...", "")
-                output = self.device.shell("mkdir /data/app_http && mkdir /data/app_http_web_root", timeout=1)
+                push_console("Create dir /data/app_http_web_root...", "")
+                output = self.device.shell("mkdir /data/app_http_web_root", timeout=1)
                 push_console("done.")
 
                 # push file
                 push_console("Upload file...", "")
-                self.device.sync.push("./files/app_http", "/system/bin/app_http")
-                self.device.sync.push("./files/key.pem", "/system/bin/key.pem")
-                self.device.sync.push("./files/cert.pem", "/system/bin/cert.pem")
+                self.device.sync.push(pathlib.Path("./files/app_http"), "/system/bin/app_http")
+                self.device.sync.push(pathlib.Path("./files/key.pem"), "/system/bin/key.pem")
+                self.device.sync.push(pathlib.Path("./files/cert.pem"), "/system/bin/cert.pem")
                 push_console("done.")
 
                 push_console("Chmod file...", "")
@@ -180,35 +181,43 @@ class App(ttk.Frame):
                 self.device.shell("settings put global package_verifier_enable 0")
                 push_console("done.")
 
-                check_recovery = self.device.shell("ls /system/bin | grep 'install-recovery.sh'")
-                if 'install-recovery.sh' in check_recovery: # file exist in system/bin
-                    push_console('found install-recovery.sh in /system/bin')
-                    output = self.device.shell("cat /system/bin/install-recovery.sh")
-                    if "app_http" not in output:
-                        push_console("Installing app_http as system service...")
-                        self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
-                    else:
-                        push_console("app_http already installed")  
+                # check_recovery = self.device.shell("ls /system/bin | grep 'install-recovery.sh'")
+                # if 'install-recovery.sh' in check_recovery: # file exist in system/bin
+                #     push_console('found install-recovery.sh in /system/bin')
+                #     output = self.device.shell("cat /system/bin/install-recovery.sh")
+                #     if "app_http" not in output:
+                #         push_console("Installing app_http as system service...")
+                #         self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                #     else:
+                #         push_console("app_http already installed")  
 
-                    if "busybox nc -lp 48069" not in output:
-                        push_console("Start port 48069 on boot...")
-                        # nc port 48069 -> for check box else tv
-                        self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
-                else: # file not exist in system/bin
-                    push_console('install-recovery.sh not found in /system/bin... create it')
-                    self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
-                    self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
-                    # nc port 48069 -> for check box else tv
-                    self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
-                    self.device.shell("chmod 777 /system/bin/install-recovery.sh")
+                #     if "busybox nc -lp 48069" not in output:
+                #         push_console("Start port 48069 on boot...")
+                #         # nc port 48069 -> for check box else tv
+                #         self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
+                # else: # file not exist in system/bin
+                #     push_console('install-recovery.sh not found in /system/bin... create it')
+                #     self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
+                #     self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                #     # nc port 48069 -> for check box else tv
+                #     self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
+                #     self.device.shell("chmod 777 /system/bin/install-recovery.sh")
+
+                # create or overwite file
+                push_console('Create in /system/bin/install-recovery.sh...', '')
+                self.device.shell("echo \"#!/system/bin/sh\" > /system/bin/install-recovery.sh")
+                self.device.shell("echo \"sh -c \'export APP_HTTP_CERT_DIR=/system/bin && export APP_HTTP_WEB_ROOT=/data/app_http_web_root && cd /system/bin && ./app_http &\'\" >> /system/bin/install-recovery.sh")
+                # nc port 48069 -> for check box else tv
+                self.device.shell("echo \"nohup busybox nc -lp 48069 &\" >> /system/bin/install-recovery.sh")
+                self.device.shell("chmod 777 /system/bin/install-recovery.sh")
+                push_console("done.")
+                
                 push_console("ALL DONE.")
                 # unmount
                 unmount_system()
 
-                # remove app & reboot
-                push_console("\nRemove app.")
+                # reboot
                 pool = ThreadPool(processes=1)
-                pool.apply_async(remove_apps)
                 pool.apply_async(reboot)
             except errors.AdbError as e:
                 print(e)
@@ -380,16 +389,15 @@ class App(ttk.Frame):
                 async_result = pool.apply_async(install_apk, [file_path])
 
         def onBtnInstallMwgTvc(*args):
-            push_console("Bạn cũng có thể tải MWG_TVC.apk bản mới tại https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk\nSau đó chép đè vào thư mục files.")
             pool = ThreadPool(processes=1)
             pool.apply_async(install_apk, ['files/MWG_TVC.apk'])
 
         def onBtnReCheck(*args):
             version = utils.recheck_version(self.selected_device)
             if version != None:
-                push_console("Cài đặt thành công. Phiên bản: {}".format(version))
+                push_console("Service đã được cài đặt. Phiên bản: {}".format(version))
             else:
-                push_console("Không thể kiểm tra dịch vụ")
+                push_console("Service chưa được cài đặt, vui lòng thực hiện lại!")
 
         def loadOptionMenu(new_choices):
             # Reset var and delete all old options
