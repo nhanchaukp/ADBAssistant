@@ -31,7 +31,7 @@ def recheck_version(ip):
         return None
     
 def send_cmd(ip, cmd, cb):
-    url = "https://{}/sh".format(ip).replace(':5555', ':8443')
+    url = "https://{}/sh?timeout=3".format(ip).replace(':5555', ':8443')
     print(url)
     try:
         with requests.post(url, data=cmd, verify=False, timeout=3, headers={
