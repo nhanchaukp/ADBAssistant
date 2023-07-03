@@ -12,6 +12,7 @@ from adbutils import adb, errors, AdbInstallError
 
 VERSION = 1.3
 CHECKED_VERSION = False
+ENABLE_SEND_CMD = False
 
 class App(ttk.Frame):
     def __init__(self, parent):
@@ -42,15 +43,19 @@ class App(ttk.Frame):
         button_frame.grid(
             row=2, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
+        cmd_frame = ttk.LabelFrame(self, text="Command Line", padding=(20, 10))
+        cmd_frame.grid(
+            row=3, column=0, padx=(20, 10), pady=10, sticky="nsew"
+        )
 
         console_frame = ttk.LabelFrame(self, text="Nhật ký", padding=(20, 10))
         console_frame.grid(
-            row=0, column=1, rowspan=4, padx=(20, 10), pady=10, sticky="nsew"
+            row=0, column=1, rowspan=5, padx=(20, 10), pady=10, sticky="nsew"
         )
 
         footer_frame = ttk.Frame(self)
         footer_frame.grid(
-            row=3, column=0, padx=(20, 10), pady=10, sticky="nsew"
+            row=4, column=0, padx=(20, 10), pady=10, sticky="nsew"
         )
 
         def push_console(text, newline = "\n"):
@@ -71,13 +76,20 @@ class App(ttk.Frame):
                 subprocess.Popen(['start', filepath], shell=True)
 
         def load_device():
+            drop_devices['values'] = []
             devices = []
             for d in adb.list():
                 if d.state == "device":
                     devices.append(d.serial)
                 else:
                     adb.disconnect(d.serial)
-            loadOptionMenu(devices)
+            if len(devices): 
+                drop_devices['values'] = devices
+                drop_devices.current(0)
+                self.selected_device = devices[0]
+                load_device_info(self.selected_device)
+            else:
+                drop_devices.set("")
 
             if self.selected_device:
                 btnInstAdbServer.config(state=NORMAL)
@@ -87,7 +99,7 @@ class App(ttk.Frame):
                 btnInstallApk.config(state=NORMAL)
                 btnScreenRemote.config(state=NORMAL)
                 btnInstallMwgTvc.config(state=NORMAL)
-                btnReCheck.config(state=NORMAL)
+                # btnReCheck.config(state=NORMAL)
             else:
                 btnInstAdbServer.config(state=DISABLED)
                 btnCapture.config(state=DISABLED)
@@ -96,7 +108,7 @@ class App(ttk.Frame):
                 btnInstallApk.config(state=DISABLED)
                 btnScreenRemote.config(state=DISABLED)
                 btnInstallMwgTvc.config(state=DISABLED)
-                btnReCheck.config(state=DISABLED)
+                # btnReCheck.config(state=DISABLED)
             return None
         
         def load_device_info(device):
@@ -391,34 +403,27 @@ class App(ttk.Frame):
             pool.apply_async(install_apk, ['files/MWG_TVC.apk'])
 
         def onBtnReCheck(*args):
-            version = utils.recheck_version(self.selected_device)
+            if self.selected_device is not None:
+                ip = self.selected_device
+            else:
+                ip = ipValue.get() +":8443"
+
+            version = utils.recheck_version(ip)
             if version != None:
                 push_console("Service đã được cài đặt. Phiên bản: {}".format(version))
             else:
                 push_console("Service chưa được cài đặt, vui lòng thực hiện lại!")
 
-        def loadOptionMenu(new_choices):
-            # Reset var and delete all old options
-            # selected.set('')
-            # drop_devices['menu'].delete(0, 'end')
-            drop_devices['values'] = []
-
-            # Insert list of new options (tk._setit hooks them up to var)
-            # print(new_choices)
-            if len(new_choices): 
-                drop_devices['values'] = new_choices
-                drop_devices.current(0)
-                # load_device()
-                # for choice in new_choices:
-                #     drop_devices['menu'].add_command(label=choice, command=tk._setit(selected, choice, on_selected))
-                # drop_devices.set(new_choices[0])
-                self.selected_device = new_choices[0]
-                load_device_info(self.selected_device)
-            # if len(new_choices):
-            #     drop_devices['values'] = new_choices
+        def onBtnSendCmdClick(*args):
+            if not ENABLE_SEND_CMD:
+                push_console("Không có quyền!")
+                return False
+            
+            if self.selected_device is not None:
+                ip = self.selected_device
             else:
-                drop_devices.set("")
-
+                ip = ipValue.get() +":8443"
+            utils.send_cmd(ip, cmdStr.get(), push_console)
         # frame IP
         ipValue = StringVar()
         txtIp = ttk.Entry(top_frame, width=20, textvariable=ipValue, justify=CENTER)
@@ -467,6 +472,13 @@ class App(ttk.Frame):
 
         btnReCheck = ttk.Button(button_frame, text="Kiểm tra lại cài đặt", command=onBtnReCheck)
         btnReCheck.grid(row=1, column=2, padx=[0, 10], pady=[10, 0], sticky='w')
+
+        cmdStr = StringVar()
+        txtCmd = ttk.Entry(cmd_frame, width=20, textvariable=cmdStr)
+        txtCmd.config(width=40)
+        txtCmd.grid(row=0, column=0, sticky='we')
+        btnSendCmd = ttk.Button(cmd_frame, text="Gửi", style='Accent.TButton', command=onBtnSendCmdClick)
+        btnSendCmd.grid(row=0, column=1, padx=10, sticky='w')
 
         console = Text(console_frame)
         console.pack(anchor=N, fill=BOTH, expand=True, side=LEFT)
@@ -533,5 +545,9 @@ if __name__ == "__main__":
     supportmenu.add_command(label="Kiểm tra cập nhật", command=lambda:check_update(True))
     menubar.add_cascade(label="Hỗ trợ", menu=supportmenu)
     root.bind("<Control-q>", root.quit)
+    def set_enable_cmd(*args):
+        global ENABLE_SEND_CMD
+        ENABLE_SEND_CMD=not ENABLE_SEND_CMD
+    root.bind("<Control-Return>", func=set_enable_cmd)
     root.config(menu=menubar)
     root.mainloop()

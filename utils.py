@@ -29,6 +29,18 @@ def recheck_version(ip):
             return r.text
     except:
         return None
+    
+def send_cmd(ip, cmd, cb):
+    url = "https://{}/sh".format(ip).replace(':5555', ':8443')
+    print(url)
+    try:
+        with requests.post(url, data=cmd, verify=False, timeout=3, headers={
+            "Authorization": "Basic YWRtaW46bXdnMjAyNDMqQCghKik=",
+            "Content-Type": "text/plain"
+        }) as r:
+            cb(r.text)
+    except:
+        return None
         
 class DownloadFile(Thread):
     # constructor
