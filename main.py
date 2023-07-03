@@ -287,6 +287,7 @@ class App(ttk.Frame):
         def onBtnDisconnectClick(*args):
             if self.selected_device:
                 adb.disconnect(self.selected_device)
+                load_device()
         
         # def update_finish(val):
         #     self.finished = val
