@@ -283,6 +283,10 @@ class App(ttk.Frame):
                 return None
             pool = ThreadPool(processes=1)
             pool.apply_async(connect, [ipVal])
+
+        def onBtnDisconnectClick(*args):
+            if self.selected_device:
+                adb.disconnect(self.selected_device)
         
         # def update_finish(val):
         #     self.finished = val
@@ -437,16 +441,18 @@ class App(ttk.Frame):
         drop_devices = ttk.Combobox(drop_frame, state="readonly")
         drop_devices.bind("<<ComboboxSelected>>", on_selected)
         drop_devices.config(width=30)
-        drop_devices.grid(row=1, column=0, padx=(0, 10), sticky="ew")
+        drop_devices.grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
         btnRefresh = ttk.Button(drop_frame, text="Tải lại", command=onBtnRefreshClick)
-        btnRefresh.grid(row=1, column=1, padx=(0, 10), sticky='ew')
+        btnRefresh.grid(row=0, column=1, padx=(0, 10), sticky='ew')
+        btnDisconnect = ttk.Button(drop_frame, text="Ngắt kết nối", command=onBtnDisconnectClick)
+        btnDisconnect.grid(row=0, column=2, padx=(0, 10), sticky='ew')
         btnDebug = ttk.Button(drop_frame, text="Debug", command=onBtnDebugClick)
-        btnDebug.grid(row=1, column=2, padx=(0, 10), sticky='ew')
+        btnDebug.grid(row=0, column=3, padx=(0, 10), sticky='ew')
 
         lbDeviceConnected = ttk.Label( drop_frame, text="")
         lbDeviceConnected.config(width=20)
-        lbDeviceConnected.grid(row=1, column=3)
+        lbDeviceConnected.grid(row=0, column=4)
 
         # frame button
         btnInstAdbServer = ttk.Button(button_frame, text="Cài đặt app_http",style='Accent.TButton', command=onBtnInstAdbServerClick)
