@@ -239,7 +239,7 @@ class App(ttk.Frame):
             try:
                 push_console("Gỡ cài đặt Chrome...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.google.chrome")
-                output = self.device.shell("rm -rf /system/app/chrome")
+                output = self.device.shell("rm -rf /system/app/Chrome")
                 push_console("done.")
                 push_console("Gỡ cài đặt XBos...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience")
@@ -396,6 +396,7 @@ class App(ttk.Frame):
 
         def install_apk(file_path):
             push_console("Đang cài đặt {}...".format(file_path))
+            # APK(file_path)
             try:
                 output = self.device.install(file_path)
                 push_console('hoàn tất.')
