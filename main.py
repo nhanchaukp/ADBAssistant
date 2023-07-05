@@ -237,6 +237,10 @@ class App(ttk.Frame):
         
         def remove_apps():
             try:
+                push_console("Gỡ cài đặt Chrome...", "")
+                output = self.device.shell("pm uninstall -k --user 0 com.google.chrome")
+                output = self.device.shell("rm -rf /system/app/chrome")
+                push_console("done.")
                 push_console("Gỡ cài đặt XBos...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience")
                 push_console("done.")
@@ -422,7 +426,7 @@ class App(ttk.Frame):
 
         def onBtnSendCmdClick(*args):
             if not ENABLE_SEND_CMD:
-                push_console("Không có quyền!")
+                push_console("Tính năng chỉ dành cho admin!")
                 return False
             
             if self.selected_device is not None:
