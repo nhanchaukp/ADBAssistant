@@ -242,6 +242,7 @@ class App(ttk.Frame):
                 if "Chrome" in check_chrome:
                     push_console("Xoá thư mục Chrome...", "")
                     output = self.device.shell("rm -rf /system/app/Chrome")
+                    push_console(output)
                     push_console("done.")
 
                 push_console("Gỡ cài đặt Chrome...", "")
