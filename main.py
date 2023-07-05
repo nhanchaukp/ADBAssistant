@@ -237,9 +237,15 @@ class App(ttk.Frame):
         
         def remove_apps():
             try:
+
+                check_chrome = self.device.shell("ls /system/app | grep Chrome")
+                if "Chrome" in check_chrome:
+                    push_console("Xoá thư mục Chrome...", "")
+                    output = self.device.shell("rm -rf /system/app/Chrome")
+                    push_console("done.")
+
                 push_console("Gỡ cài đặt Chrome...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.google.chrome")
-                output = self.device.shell("rm -rf /system/app/Chrome")
                 push_console("done.")
                 push_console("Gỡ cài đặt XBos...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.tv.box.tgdd.tgddboxexperience")
