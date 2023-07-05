@@ -242,9 +242,14 @@ class App(ttk.Frame):
                 check_chrome = self.device.shell("ls /system/app | grep Chrome")
                 if "Chrome" in check_chrome:
                     push_console("Xoá thư mục Chrome...", "")
-                    output = self.device.shell("rm -rf /system/app/Chrome")
-                    push_console(output)
+                    self.device.shell("rm -rf /system/app/Chrome")
                     push_console("done.")
+                check_gmsStiting = self.device.shell("ls /system/priv-app | grep GmsStiting")
+                if "GmsStiting" in check_gmsStiting:
+                    push_console("Xoá thư mục GmsStiting...", "")
+                    self.device.shell("rm -rf /system/priv-app/GmsStiting")
+                    push_console("done.")
+                    
 
                 push_console("Gỡ cài đặt Chrome...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.google.chrome")
