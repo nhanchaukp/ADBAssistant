@@ -238,6 +238,7 @@ class App(ttk.Frame):
         def remove_apps():
             try:
 
+                mount_system()
                 check_chrome = self.device.shell("ls /system/app | grep Chrome")
                 if "Chrome" in check_chrome:
                     push_console("Xoá thư mục Chrome...", "")
@@ -263,6 +264,7 @@ class App(ttk.Frame):
                 push_console("Gỡ cài đặt HiMediaTV...", "")
                 output = self.device.shell("pm uninstall -k --user 0 com.himedia.channeltv", timeout=10)
                 push_console("done.")
+                unmount_system()
             except errors.AdbError as e:
                 push_console("FAIL: {}\n\n".format(e))   
 
