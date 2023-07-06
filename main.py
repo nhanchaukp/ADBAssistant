@@ -11,7 +11,7 @@ from time import sleep
 from adbutils import adb, errors, AdbInstallError
 from pyaxmlparser import APK
 from packaging import version
-
+import APKUtils
 
 VERSION = 1.4
 CHECKED_VERSION = False
@@ -426,7 +426,7 @@ class App(ttk.Frame):
                 push_console("done.")
                 return True
             
-            apk = APK("./files/MWG_TVC.apk")
+            apk = APKUtils.APK("./files/MWG_TVC.apk")
             json = utils.get_mwgtvc_json()
             # print(json)
             if json is not None:
@@ -444,8 +444,8 @@ class App(ttk.Frame):
         def install_apk(file_path):
             push_console("Đang cài đặt {}...".format(file_path))
             try:
-                apk = APK(file_path) # recall to get new version
-                push_console(f"- Ứng dụng: {apk.application}\n - Phiên bản: {apk.version_name}")
+                apk = APKUtils.APK(file_path) # recall to get new version
+                push_console(f"- Phiên bản: {apk.version_name}")
                 cap = utils.Capturing()
                 cap.on_readline(lambda line: lbDlProcess.config(text=str(line).strip()))
                 cap.start()
@@ -467,7 +467,7 @@ class App(ttk.Frame):
         def onBtnInstallMwgTvc(*args):
             pool = ThreadPool(processes=1)
             pool.apply_async(check_mwgtvc)
-            pool.apply_async(install_apk, ['files/MWG_TVC.apk'])
+            pool.apply_async(install_apk, ['./files/MWG_TVC.apk'])
 
         def onBtnReCheck(*args):
             if self.selected_device is not None:
@@ -561,9 +561,8 @@ class App(ttk.Frame):
 
         
         load_device()
-        # with APK.from_file("./files/MWG_TVC.apk") as apk:
-        #     apk.get_manifest()
-
+        # apk = APKUtils.APK("./files/MWG_TVC.apk")
+        # print(apk.__dict__)
         self.after(1000, check_update)
 
 def check_update(force = False):
