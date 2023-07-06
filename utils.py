@@ -2,6 +2,7 @@ import os, requests, re, socket, json, platform, subprocess
 from threading import Thread
 import threading
 import sys
+from pget.down import Downloader
 
 def openfile(filepath):
     if platform.system() == 'Darwin':       # macOS
@@ -122,7 +123,6 @@ class ScanAndroidBox(Thread):
             self.function("List IP TVBox:\n - %s \nplease copy it and Connect." % '\n - '.join(self.device_online))
 
 def downloader(url, savepath, callback):
-    from pget.down import Downloader
     dl = Downloader(url, savepath, 10)
     dl.start()
     dl.subscribe(callback)

@@ -11,8 +11,6 @@ from time import sleep
 from adbutils import adb, errors, AdbInstallError
 from pyaxmlparser import APK
 from packaging import version
-import io
-from contextlib import redirect_stdout
 
 
 VERSION = 1.4
