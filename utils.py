@@ -1,5 +1,7 @@
 import os, requests, re, socket, json, platform, subprocess
 from threading import Thread
+import threading
+import sys
 
 def openfile(filepath):
     if platform.system() == 'Darwin':       # macOS
@@ -13,7 +15,15 @@ def valid_ip(ip):
 def get_update_json():
     url_json = "https://aliasesurl.tgdd.vn/ADBServer/update.json"
     try:
-        with requests.get(url_json, stream=True, timeout=2) as r:
+        with requests.get(url_json, stream=True, timeout=2, headers={'Cache-Control': 'no-cache'}) as r:
+            return json.loads(r.content)
+    except:
+        return None
+    
+def get_mwgtvc_json():
+    url_json = "https://aliasesurl.tgdd.vn/AppBundle/version_MWG_TVC.json"
+    try:
+        with requests.get(url_json, stream=True, timeout=2, headers={'Cache-Control': 'no-cache'}) as r:
             return json.loads(r.content)
     except:
         return None
@@ -110,3 +120,52 @@ class ScanAndroidBox(Thread):
         
         if len(self.device_online):
             self.function("List IP TVBox:\n - %s \nplease copy it and Connect." % '\n - '.join(self.device_online))
+
+def downloader(url, savepath, callback):
+    from pget.down import Downloader
+    dl = Downloader(url, savepath, 10)
+    dl.start()
+    dl.subscribe(callback)
+    dl.wait_for_finish()
+
+
+class Capturing():
+    def __init__(self):
+        self._stdout = None
+        self._stderr = None
+        self._r = None
+        self._w = None
+        self._thread = None
+        self._on_readline_cb = None
+
+    def _handler(self):
+        while not self._w.closed:
+            try:
+                while True:
+                    line = self._r.readline()
+                    if len(line) == 0: break
+                    if self._on_readline_cb: self._on_readline_cb(line)
+            except:
+                break
+            
+    def on_readline(self, callback):
+        self._on_readline_cb = callback
+
+    def start(self):
+        self._stdout = sys.stdout
+        self._stderr = sys.stderr
+        r, w = os.pipe()
+        r, w = os.fdopen(r, 'r'), os.fdopen(w, 'w', 1)
+        self._r = r
+        self._w = w
+        sys.stdout = self._w
+        sys.stderr = self._w
+        self._thread = threading.Thread(target=self._handler)
+        self._thread.start()
+
+    def stop(self):
+        self._w.close()
+        if self._thread: self._thread.join()
+        self._r.close()
+        sys.stdout = self._stdout
+        sys.stderr = self._stderr

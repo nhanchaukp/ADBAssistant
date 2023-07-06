@@ -9,8 +9,13 @@ from multiprocessing.pool import ThreadPool
 from threading import Thread, Lock
 from time import sleep
 from adbutils import adb, errors, AdbInstallError
+from pyaxmlparser import APK
+from packaging import version
+import io
+from contextlib import redirect_stdout
 
-VERSION = 1.3
+
+VERSION = 1.4
 CHECKED_VERSION = False
 ENABLE_SEND_CMD = False
 
@@ -408,23 +413,62 @@ class App(ttk.Frame):
         def onBtnScreenRemote(*args):
             start_scrcpy()
 
+        def update_dl_process(state):
+            process = round((state.total_downloaded / state.total_length) * 100, 1)
+            lbDlProcess.config(text=f"Đang tải...{process}%")
+            if process==100:
+                lbDlProcess.config(text="")
+
+        def check_mwgtvc():
+            url = "https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk"
+
+            if os.path.exists("./files/MWG_TVC.apk") == False:
+                push_console("Đang tải MWG_TVC.apk...", "")
+                utils.downloader(url=url, savepath="./files/MWG_TVC.apk", callback=update_dl_process)
+                push_console("done.")
+                return True
+            
+            apk = APK("./files/MWG_TVC.apk")
+            json = utils.get_mwgtvc_json()
+            # print(json)
+            if json is not None:
+                if version.parse(str(json["version"])) > version.parse(str(apk.version_name)):
+                    # start download file
+                    push_console("Có bản cập nhật MWV_TVC mới: {}".format(json["version"]))
+                    if json.get("download_url", "") != "":
+                        url = json["download_url"]
+                    push_console("Đang tải MWG_TVC.apk...", "")
+                    utils.downloader(url=url, savepath="./files/MWG_TVC.apk", callback=update_dl_process)
+                    push_console("done.")
+                    return True
+            return False
+
         def install_apk(file_path):
             push_console("Đang cài đặt {}...".format(file_path))
-            # APK(file_path)
             try:
-                output = self.device.install(file_path)
+                apk = APK(file_path) # recall to get new version
+                push_console(f"- Ứng dụng: {apk.application}\n - Phiên bản: {apk.version_name}")
+                cap = utils.Capturing()
+                cap.on_readline(lambda line: lbDlProcess.config(text=str(line).strip()))
+                cap.start()
+                self.device.install(file_path)
+                cap.stop()
+                lbDlProcess.config(text="")
                 push_console('hoàn tất.')
             except AdbInstallError as e:
                 push_console("error: %s" % e)
+            except Exception as e:
+                push_console(e)
 
         def onBtnInstallApkClick(*args):
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
             if file_path != "":
                 pool = ThreadPool(processes=1)
-                async_result = pool.apply_async(install_apk, [file_path])
+                pool.apply_async(install_apk, [file_path])
 
         def onBtnInstallMwgTvc(*args):
             pool = ThreadPool(processes=1)
+            pool.apply_async(check_mwgtvc)
             pool.apply_async(install_apk, ['files/MWG_TVC.apk'])
 
         def onBtnReCheck(*args):
@@ -514,8 +558,13 @@ class App(ttk.Frame):
         lbStatus = ttk.Label(footer_frame, text=str_footer)
         lbStatus.grid(row=0,column=0, padx=(0, 10), sticky='we')
 
+        lbDlProcess = ttk.Label(footer_frame, text="")
+        lbDlProcess.grid(row=0,column=1, padx=(0, 10), sticky='we')
+
         
         load_device()
+        # with APK.from_file("./files/MWG_TVC.apk") as apk:
+        #     apk.get_manifest()
 
         self.after(1000, check_update)
 
@@ -526,7 +575,7 @@ def check_update(force = False):
     CHECKED_VERSION = True
     json = utils.get_update_json()
     if json is not None:
-        if float(json["version"]) > float(VERSION):
+        if version.parse(str(json["version"])) > version.parse(str(VERSION)):
             answer = messagebox.askyesno(title="Có bản cập nhật", message="{}\n\nChọn YES để bắt đầu.".format(json["changelog"]))
             if answer:
                 if platform.system() == 'Darwin':       # macOS
