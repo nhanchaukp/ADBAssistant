@@ -16,15 +16,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Androguard.  If not, see <http://www.gnu.org/licenses/>.
 
-import bytecode
 
 import typeconstants as tc
 from axmlparser import AXMLParser
-from bytecode import SV
 
-from io import StringIO
+# from io import StringIO
 from struct import pack, unpack
-from xml.dom import minidom
 from xml.sax import saxutils
 
 class AXMLPrinter:

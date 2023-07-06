@@ -7,9 +7,7 @@ from tkinter import filedialog, messagebox
 import utils
 from multiprocessing.pool import ThreadPool
 from threading import Thread, Lock
-from time import sleep
 from adbutils import adb, errors, AdbInstallError
-from pyaxmlparser import APK
 from packaging import version
 import APKUtils
 

@@ -1,5 +1,4 @@
 import zipfile
-import xml.etree.ElementTree as ET
 
 class AndroidXMLDecompress():
     endDocTag = 0x00100101
@@ -90,6 +89,8 @@ class APK():
         self.version_name = dom.documentElement.getAttribute("android:versionName")
         self.version_code = dom.documentElement.getAttribute("android:versionCode")
         self.package = dom.documentElement.getAttribute("package")
+
+        # import xml.etree.ElementTree as ET
         # a = AndroidXMLDecompress()
         # xmlStr = a.decompressXML(byte)
         # root = ET.fromstring(xmlStr)
