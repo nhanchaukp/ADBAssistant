@@ -194,6 +194,14 @@ class App(ttk.Frame):
                 self.device.shell("settings put global package_verifier_enable 0")
                 push_console("done.")
 
+                push_console("Enable auto update time...", "")
+                self.device.shell("settings put global auto_time 1")
+                push_console("done.")
+
+                push_console("Change timezone to Asia/Ho_Chi_Minh...", "")
+                self.device.shell("setprop persist.sys.timezone \"Asia/Ho_Chi_Minh\"")
+                push_console("done.")
+
                 # check_recovery = self.device.shell("ls /system/bin | grep 'install-recovery.sh'")
                 # if 'install-recovery.sh' in check_recovery: # file exist in system/bin
                 #     push_console('found install-recovery.sh in /system/bin')
