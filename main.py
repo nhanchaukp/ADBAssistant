@@ -452,9 +452,12 @@ class App(ttk.Frame):
                 lbDlProcess.config(text="")
                 push_console('hoàn tất.')
             except AdbInstallError as e:
-                push_console("error: %s" % e)
+                push_console("adb error: %s" % e)
             except Exception as e:
                 push_console(e)
+                if "Bad magic number for central directory" in e:
+                    os.remove(file_path)
+                    push_console("[!] Vui lòng thực hiện lại nhoa.")
 
         def onBtnInstallApkClick(*args):
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
