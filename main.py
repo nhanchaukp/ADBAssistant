@@ -108,7 +108,7 @@ class App(ttk.Frame):
                 btnBlinkLed.config(state=DISABLED)
                 btnInstallApk.config(state=DISABLED)
                 btnScreenRemote.config(state=DISABLED)
-                btnInstallMwgTvc.config(state=DISABLED)
+                # btnInstallMwgTvc.config(state=DISABLED)
                 # btnReCheck.config(state=DISABLED)
             return None
         
@@ -425,40 +425,48 @@ class App(ttk.Frame):
 
         def update_dl_process(state):
             process = round((state.total_downloaded / state.total_length) * 100, 1)
-            lbDlProcess.config(text=f"Đang tải...{process}%")
+            detail = "[{}MB/{}MB]".format(round(state.total_downloaded/1048576, 1), round(state.total_length/1048576, 1))
+            rate = f"{state.readable_speed}/s"
+            lbDlProcess.config(text=f"Đang tải...{process}%   {rate} {detail}")
             if process==100:
                 lbDlProcess.config(text="")
 
-        def check_mwgtvc():
+        def check_mwgtvc(file_path):
             url = "https://aliasesurl.tgdd.vn/AppBundle/MWG_TVC.apk"
-
-            if os.path.exists("./files/MWG_TVC.apk") == False:
-                push_console("Đang tải MWG_TVC.apk...", "")
-                utils.downloader(url=url, savepath="./files/MWG_TVC.apk", callback=update_dl_process)
-                push_console("done.")
-                return True
-            
-            apk = APKUtils.APK("./files/MWG_TVC.apk")
-            json = utils.get_mwgtvc_json()
+            server_version = utils.get_mwgtvc_json()
             # print(json)
-            if json is not None:
-                if version.parse(str(json["version"])) > version.parse(str(apk.version_name)):
-                    # start download file
-                    push_console("Có bản cập nhật MWV_TVC mới: {}".format(json["version"]))
-                    if json.get("download_url", "") != "":
-                        url = json["download_url"]
-                    push_console("Đang tải MWG_TVC.apk...", "")
-                    utils.downloader(url=url, savepath="./files/MWG_TVC.apk", callback=update_dl_process)
-                    push_console("done.")
+            if server_version is None:
+                return False
+            if os.path.exists(file_path) == False:
+                push_console("Đang tải MWG_TVC.apk...", "")
+                utils.downloader(url=url, savepath=file_path, callback=update_dl_process)
+                push_console("done.")
+                push_console("Checksum apk file...", "")
+                #checksum
+                fileinfo = os.stat(file_path)
+                if fileinfo.st_size == server_version["size"]:
+                    push_console("pass.")
                     return True
+                else:
+                    push_console("not match.")
+                    os.remove(file_path) # delete file
+                    check_mwgtvc(file_path) # re download
+            
+            apk = APKUtils.APK(file_path)
+            if version.parse(str(server_version["version"])) > version.parse(str(apk.version_name)):
+                # start download file
+                push_console("Có bản cập nhật MWV_TVC mới: {}".format(server_version["version"]))
+                os.remove(file_path) # delete file
+                check_mwgtvc(file_path) # re-download
             return False
 
         def install_apk(file_path):
             push_console("Đang cài đặt {}...".format(file_path))
+
+            cap = utils.Capturing()
             try:
                 apk = APKUtils.APK(file_path) # recall to get new version
                 push_console(f"- Phiên bản: {apk.version_name}")
-                cap = utils.Capturing()
                 cap.on_readline(lambda line: lbDlProcess.config(text=str(line).strip()))
                 cap.start()
                 self.device.install(file_path)
@@ -466,8 +474,10 @@ class App(ttk.Frame):
                 lbDlProcess.config(text="")
                 push_console('hoàn tất.')
             except AdbInstallError as e:
+                cap.stop()
                 push_console("adb error: %s" % e)
             except Exception as e:
+                cap.stop()
                 push_console("error: %s" % e)
                 os.remove(file_path)
                 push_console("[!] Vui lòng thực hiện lại nhoa.")
@@ -480,7 +490,7 @@ class App(ttk.Frame):
 
         def onBtnInstallMwgTvc(*args):
             pool = ThreadPool(processes=1)
-            pool.apply_async(check_mwgtvc)
+            pool.apply_async(check_mwgtvc, ['./files/MWG_TVC.apk'])
             pool.apply_async(install_apk, ['./files/MWG_TVC.apk'])
 
         def onBtnReCheck(*args):
