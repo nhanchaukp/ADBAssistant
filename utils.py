@@ -43,14 +43,16 @@ def recheck_version(ip):
     
 def send_cmd(ip, cmd, cb):
     url = "https://{}/sh?timeout=3".format(ip).replace(':5555', ':8443')
-    print(url)
     try:
+        import urllib3
+        urllib3.disable_warnings()
         with requests.post(url, data=cmd, verify=False, timeout=3, headers={
             "Authorization": "Basic YWRtaW46bXdnMjAyNDMqQCghKik=",
             "Content-Type": "text/plain"
         }) as r:
             cb(r.text)
-    except:
+    except Exception as e:
+        print(e)
         return None
         
 class DownloadFile(Thread):
