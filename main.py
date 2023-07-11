@@ -455,9 +455,8 @@ class App(ttk.Frame):
                 push_console("adb error: %s" % e)
             except Exception as e:
                 push_console("error: %s" % e)
-                if "magic number for" in e: #Bad magic number for central directory
-                    os.remove(file_path)
-                    push_console("[!] Vui lòng thực hiện lại nhoa.")
+                os.remove(file_path)
+                push_console("[!] Vui lòng thực hiện lại nhoa.")
 
         def onBtnInstallApkClick(*args):
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
