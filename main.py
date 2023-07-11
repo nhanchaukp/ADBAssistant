@@ -454,8 +454,8 @@ class App(ttk.Frame):
             except AdbInstallError as e:
                 push_console("adb error: %s" % e)
             except Exception as e:
-                push_console(e)
-                if "Bad magic number for central directory" in e:
+                push_console("error: %s" % e)
+                if "magic number for" in e: #Bad magic number for central directory
                     os.remove(file_path)
                     push_console("[!] Vui lòng thực hiện lại nhoa.")
 
