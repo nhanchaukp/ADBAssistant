@@ -130,14 +130,14 @@ class App(ttk.Frame):
             load_device_info(self.selected_device)
         
         def mount_system():
-            push_console("Mount system")
+            push_console("Mount system\n---")
             try:
                 self.device.shell("mount -o remount,rw /system && busybox chmod o+w /system/bin")
             except errors.AdbError as e:
                 push_console("mount fail")
             
         def unmount_system():
-            push_console("Unmount system")
+            push_console("Unmount system\n---")
             try:
                 self.device.shell("busybox chmod o-w /system/etc && mount -o remount,ro /system")
             except errors.AdbError as e:
@@ -157,7 +157,7 @@ class App(ttk.Frame):
             pool.apply_async(install_app_http)
 
         def install_curl():
-            push_console("Installing lib.")
+            push_console("Installing lib\n---")
             try:
                 mount_system()
                 push_console("Installing curl...", "")
@@ -170,7 +170,7 @@ class App(ttk.Frame):
                 push_console("FAIL. Cần làm lại từ đầu!\n\n")
             
         def install_app_http():
-            push_console("Installing app_http.")
+            push_console("Installing app_http\n---")
             # make dir
             try:
                 mount_system()
@@ -193,6 +193,12 @@ class App(ttk.Frame):
                 push_console("Disable setting package_verifier_enable...", "")
                 self.device.shell("settings put global package_verifier_enable 0")
                 push_console("done.")
+
+                output = self.device.shell("date")
+                push_console("---\nCurrent box time: %s" % output)
+
+                output = self.device.shell("getprop persist.sys.timezone")
+                push_console("Current box timezone: %s\n---" % output)
 
                 push_console("Enable auto update time...", "")
                 self.device.shell("settings put global auto_time 1")
