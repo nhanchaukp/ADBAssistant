@@ -3,7 +3,9 @@ from threading import Thread
 import threading
 import sys
 from pget.down import Downloader
+import urllib3
 
+urllib3.disable_warnings()
 def openfile(filepath):
     if platform.system() == 'Darwin':       # macOS
         subprocess.Popen(['open', filepath])
@@ -44,8 +46,6 @@ def recheck_version(ip):
 def send_cmd(ip, cmd, cb):
     url = "https://{}/sh?timeout=3".format(ip).replace(':5555', ':8443')
     try:
-        import urllib3
-        urllib3.disable_warnings()
         with requests.post(url, data=cmd, verify=False, timeout=3, headers={
             "Authorization": "Basic YWRtaW46bXdnMjAyNDMqQCghKik=",
             "Content-Type": "text/plain"
