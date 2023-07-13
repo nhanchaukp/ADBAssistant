@@ -11,7 +11,7 @@ from adbutils import adb, errors, AdbInstallError
 from packaging import version
 import APKUtils
 
-VERSION = 1.6
+VERSION = 1.7
 CHECKED_VERSION = False
 ENABLE_SEND_CMD = False
 
@@ -463,10 +463,10 @@ class App(ttk.Frame):
         def install_apk(file_path):
             push_console("Đang cài đặt {}...".format(file_path))
 
-            cap = utils.Capturing()
             try:
                 apk = APKUtils.APK(file_path) # recall to get new version
                 push_console(f"- Phiên bản: {apk.version_name}")
+                cap = utils.Capturing()
                 cap.on_readline(lambda line: lbDlProcess.config(text=str(line).strip()))
                 cap.start()
                 self.device.install(file_path)
@@ -474,13 +474,14 @@ class App(ttk.Frame):
                 lbDlProcess.config(text="")
                 push_console('hoàn tất.')
             except AdbInstallError as e:
-                cap.stop()
                 push_console("adb error: %s" % e)
             except Exception as e:
-                cap.stop()
                 push_console("error: %s" % e)
                 os.remove(file_path)
                 push_console("[!] Vui lòng thực hiện lại nhoa.")
+            
+            if cap: 
+                cap.stop()
 
         def onBtnInstallApkClick(*args):
             file_path = filedialog.askopenfilename(title="Select APK", parent=self, filetypes=[("APK File", "*.apk")])
