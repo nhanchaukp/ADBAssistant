@@ -476,7 +476,7 @@ class App(ttk.Frame):
             except AdbInstallError as e:
                 push_console("adb error: %s" % e)
             except Exception as e:
-                push_console("error: %s" % e)
+                push_console(e)
                 os.remove(file_path)
                 push_console("[!] Vui lòng thực hiện lại nhoa.")
             
