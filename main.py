@@ -249,7 +249,16 @@ class App(ttk.Frame):
             except errors.AdbError as e:
                 print(e)
                 push_console("FAIL {}. Cần làm lại từ đầu!\n\n".format(e))   
-        
+
+        def uninstall(package):
+            push_console(f"Gỡ cài đặt {package}...", "")
+            if self.selected_device:
+                output = self.device.shell(f"pm uninstall {package}")
+                push_console(output)
+            else:
+                ip = ipValue.get() +":8443"
+                utils.send_cmd(ip, f"pm uninstall {package}", push_console)
+            
         def remove_apps():
             try:
 
@@ -436,6 +445,7 @@ class App(ttk.Frame):
             server_version = utils.get_mwgtvc_json()
             # print(json)
             if server_version is None:
+                push_console("Không kiểm tra được phiên bản MWG_TVC hiện tại, vui lòng kiểm tra lại bạn đã sử dụng wifi tại siêu thị hay chưa!")
                 return False
             if os.path.exists(file_path) == False:
                 push_console("Đang tải MWG_TVC.apk...", "")
@@ -448,7 +458,7 @@ class App(ttk.Frame):
                     push_console("pass.")
                     return True
                 else:
-                    push_console("not match.")
+                    push_console("fail.")
                     os.remove(file_path) # delete file
                     check_mwgtvc(file_path) # re download
             
@@ -474,10 +484,11 @@ class App(ttk.Frame):
                 lbDlProcess.config(text="")
                 push_console('hoàn tất.')
             except AdbInstallError as e:
+                os.remove(file_path)
                 push_console("adb error: %s" % e)
             except Exception as e:
-                push_console(e)
                 os.remove(file_path)
+                push_console(e)
                 push_console("[!] Vui lòng thực hiện lại nhoa.")
             
             if cap: 
@@ -493,6 +504,10 @@ class App(ttk.Frame):
             pool = ThreadPool(processes=1)
             pool.apply_async(check_mwgtvc, ['./files/MWG_TVC.apk'])
             pool.apply_async(install_apk, ['./files/MWG_TVC.apk'])
+
+        def onBtnUninstallMwgTvc(*args):
+            pool = ThreadPool(processes=1)
+            pool.apply_async(uninstall, ['com.videoplayer'])
 
         def onBtnReCheck(*args):
             if self.selected_device is not None:
@@ -544,28 +559,31 @@ class App(ttk.Frame):
 
         # frame button
         btnInstAdbServer = ttk.Button(button_frame, text="Cài đặt app_http",style='Accent.TButton', command=onBtnInstAdbServerClick)
-        btnInstAdbServer.grid(row=0, column=0, padx=(0,10), sticky='w')
+        btnInstAdbServer.grid(row=0, column=0, padx=(0,10), sticky='we')
 
         btnInstallApk = ttk.Button(button_frame, text="Cài đặt APK", command=onBtnInstallApkClick)
-        btnInstallApk.grid(row=0, column=1, padx=[0, 10], sticky='w')
+        btnInstallApk.grid(row=0, column=1, padx=(0,10), sticky='we')
 
         btnInstallMwgTvc = ttk.Button(button_frame, text="Cài đặt MWG_TVC", command=onBtnInstallMwgTvc)
-        btnInstallMwgTvc.grid(row=0, column=2, padx=[0, 10], sticky='w')
+        btnInstallMwgTvc.grid(row=0, column=2, padx=(0,10), sticky='we')
+
+        btnUninstallMwgTvc = ttk.Button(button_frame, text="Gỡ MWG_TVC", command=onBtnUninstallMwgTvc)
+        btnUninstallMwgTvc.grid(row=0, column=3, padx=(0,10), sticky='we')
 
         btnCapture = ttk.Button(button_frame, text="Chụp màn hình", command=onBtnCaptureClick)
-        btnCapture.grid(row=0, column=3, padx=[0, 10], sticky='w')
+        btnCapture.grid(row=0, column=4, sticky='we')
 
         btnReboot = ttk.Button(button_frame, text="Khởi động lại", command=onBtnRebootClick)
-        btnReboot.grid(row=0, column=4, padx=[0, 10], sticky='w')
+        btnReboot.grid(row=1, column=0, padx=(0,10), pady=[10, 0], sticky='we')
 
         btnBlinkLed = ttk.Button(button_frame, text="Chớp đèn nguồn", command=onBtnBlinkLedClick)
-        btnBlinkLed.grid(row=1, column=0, padx=[0, 10], pady=(10, 0), sticky='w')
+        btnBlinkLed.grid(row=1, column=1, padx=(0,10), pady=[10, 0], sticky='we')
 
         btnScreenRemote = ttk.Button(button_frame, text="Điều khiển", command=onBtnScreenRemote)
-        btnScreenRemote.grid(row=1, column=1, padx=[0, 10], pady=[10, 0], sticky='w')
+        btnScreenRemote.grid(row=1, column=2, padx=(0,10), pady=[10, 0], sticky='we')
 
         btnReCheck = ttk.Button(button_frame, text="Kiểm tra lại cài đặt", command=onBtnReCheck)
-        btnReCheck.grid(row=1, column=2, padx=[0, 10], pady=[10, 0], sticky='w')
+        btnReCheck.grid(row=1, column=3, padx=(0,10), pady=[10, 0], sticky='we')
 
         cmdStr = StringVar()
         txtCmd = ttk.Entry(cmd_frame, width=20, textvariable=cmdStr)
