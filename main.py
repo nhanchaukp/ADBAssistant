@@ -257,7 +257,8 @@ class App(ttk.Frame):
                 push_console(output)
             else:
                 ip = ipValue.get() +":8443"
-                utils.send_cmd(ip, f"pm uninstall {package}", push_console)
+                output = utils.send_cmd(ip, f"pm uninstall {package}", push_console)
+                push_console(output)
             
         def remove_apps():
             try:
