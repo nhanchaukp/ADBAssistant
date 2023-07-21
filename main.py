@@ -11,7 +11,7 @@ from adbutils import adb, errors, AdbInstallError
 from packaging import version
 import APKUtils
 
-VERSION = 1.7
+VERSION = 1.8
 CHECKED_VERSION = False
 ENABLE_SEND_CMD = False
 
