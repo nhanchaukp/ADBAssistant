@@ -532,7 +532,7 @@ class App(ttk.Frame):
                 ip = ipValue.get() +":8443"
             push_console("Kiểm tra kết nối mạng của box %s" % ip)
             push_console("Kết nối tới box...", "")
-            output = utils.send_cmd(ip, "ping -c 2 aliasesurl.tgdd.vn", cb=NoneFunc)
+            output = utils.send_cmd(ip, "ping -c 2 tvbox.tgdd.vn", cb=NoneFunc)
 
             if output is None:
                 push_console("không có kết nối.")
