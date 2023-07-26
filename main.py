@@ -521,10 +521,11 @@ class App(ttk.Frame):
                 push_console("Service đã được cài đặt. Phiên bản: {}".format(version))
             else:
                 push_console("Service chưa được cài đặt, vui lòng thực hiện lại!")
+        
         def NoneFunc(str):
             print(str)
 
-        def onBtnCheckNet(*args):
+        def check_box_network():
             if self.selected_device is not None:
                 ip = self.selected_device
             else:
@@ -542,6 +543,9 @@ class App(ttk.Frame):
                     push_console("ổn định.")
                 else:
                     push_console("không có kết nối.")
+        def onBtnCheckNet(*args):
+            pool = ThreadPool(processes=1)
+            pool.apply_async(check_box_network)
 
         def onBtnSendCmdClick(*args):
             if not ENABLE_SEND_CMD:
