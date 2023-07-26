@@ -44,15 +44,17 @@ def recheck_version(ip):
         return None
     
 def send_cmd(ip, cmd, cb):
-    url = "https://{}/sh?timeout=3".format(ip).replace(':5555', ':8443')
+    url = "https://{}/sh?timeout=10".format(ip).replace(':5555', ':8443')
     try:
-        with requests.post(url, data=cmd, verify=False, timeout=3, headers={
+        with requests.post(url, data=cmd, verify=False, timeout=10, headers={
             "Authorization": "Basic YWRtaW46bXdnMjAyNDMqQCghKik=",
             "Content-Type": "text/plain"
         }) as r:
             cb(r.text)
+            return r.text
     except Exception as e:
         print(e)
+        cb("Lỗi kết nối tới box %s" % e)
         return None
         
 class DownloadFile(Thread):
