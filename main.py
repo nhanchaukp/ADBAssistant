@@ -650,7 +650,7 @@ def check_update(force = False):
 
 def check_store() -> bool:
     json = utils.get_current_store()
-    print(json)
+    # print(json)
     if json is not None:
         if "id" not in json["object"]:
             messagebox.showinfo(title="Cấm sử dụng", message="Chỉ được sử dụng công cụ này trong siêu thị.")
