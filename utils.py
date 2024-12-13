@@ -23,6 +23,19 @@ def get_update_json():
     except:
         return None
     
+def get_current_store():
+    url_json = "https://erpapp.tgdd.vn/mwg-app-pfsense-controller-service/api/store/get-info-by-ip"
+    try:
+        headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+        }
+        payload = json.dumps({})
+        with requests.post(url_json, stream=True, timeout=2, headers=headers, data=payload) as r:
+            return json.loads(r.content)
+    except:
+        return None
+    
 def get_mwgtvc_json():
     url_json = "https://aliasesurl.tgdd.vn/AppBundle/version_MWG_TVC.json"
     try:

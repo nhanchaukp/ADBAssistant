@@ -1,3 +1,4 @@
+import sys
 from tkinter import *
 import os, subprocess, platform, pathlib
 from datetime import datetime
@@ -11,7 +12,7 @@ from adbutils import adb, errors, AdbInstallError
 from packaging import version
 import APKUtils
 
-VERSION = 1.9
+VERSION = 2.0
 CHECKED_VERSION = False
 ENABLE_SEND_CMD = False
 
@@ -647,11 +648,25 @@ def check_update(force = False):
     elif force == True:
         messagebox.showinfo(title="Kiểm tra cập nhật", message="Bạn đang dùng phiên bản mới nhất")
 
+def check_store() -> bool:
+    json = utils.get_current_store()
+    print(json)
+    if json is not None:
+        if "id" not in json["object"]:
+            messagebox.showinfo(title="Cấm sử dụng", message="Chỉ được sử dụng công cụ này trong siêu thị.")
+            return False
+    return True
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("ADB Assistant")
     if platform.system() == 'Windows':    # Windows
         root.iconbitmap('icon.ico')
+
+    # check store
+    if not check_store():
+        sys.exit(1)
 
     # Simply set the theme
     root.tk.call("source", "azure.tcl")
@@ -666,6 +681,7 @@ if __name__ == "__main__":
     x_cordinate = int((root.winfo_screenwidth() / 2) - (root.winfo_width() / 2))
     y_cordinate = int((root.winfo_screenheight() / 2) - (root.winfo_height() / 2))
     root.geometry("+{}+{}".format(x_cordinate, y_cordinate-20))
+
 
 
     menubar = Menu(root)
